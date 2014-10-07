@@ -7,17 +7,17 @@ Medical Image Conversion and Input/Output Tools
 
 Named after Robert Boyle (1627-1691), known as the first modern chemist, although he believed in the transmutation of metals to be a possibility following the alchemical tradition.
 
-.. image:: https://secure.travis-ci.org/alexsavio/boyle.png?branch=master
-    :target: https://travis-ci.org/alexsavio/boyle
+.. image:: https://secure.travis-ci.org/neurita/boyle.png?branch=master
+    :target: https://travis-ci.org/neurita/boyle
 
-.. image:: https://coveralls.io/repos/alexsavio/boyle/badge.png
-    :target: https://coveralls.io/r/alexsavio/boyle
+.. image:: https://coveralls.io/repos/neurita/boyle/badge.png
+    :target: https://coveralls.io/r/neurita/boyle
 
 
 Dependencies
 ============
 
-Please see the requirements.txt file.
+Please see the requirements.txt and pip_requirements.txt file.
 
 Install
 =======
