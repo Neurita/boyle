@@ -26,11 +26,11 @@ This package uses setuptools and Makefiles.
 
 I've made a workaround to deal with build dependencies of some requirements.
 So there are two requirements files: requirements.txt and pip-requirements.txt.
-The requirements.txt dependencies must be installed one by one, with:
+The requirements.txt dependencies must be installed one by one, with::
 
     make install_deps
 
-The following command will install everything with all dependencies:
+The following command will install everything with all dependencies::
 
     make install
     
