@@ -1,0 +1,5 @@
+#pip install the rest
+h5py
+pandas
+python-Levenshtein
+baker
