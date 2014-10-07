@@ -36,6 +36,9 @@ if __name__ == '__main__':
 
     try:
         for dep_name in deps:
+            if dep_name == 'None':
+                continue
+
             cmd = "pip install {0}".format(dep_name)
             print('#', cmd)
             subprocess.check_call(cmd, shell=True)
