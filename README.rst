@@ -9,6 +9,7 @@ Named after Robert Boyle (1627-1691), known as the first modern chemist, althoug
 
 .. image:: https://secure.travis-ci.org/alexsavio/boyle.png?branch=master
     :target: https://travis-ci.org/alexsavio/boyle
+
 .. image:: https://coveralls.io/repos/alexsavio/boyle/badge.png
     :target: https://coveralls.io/r/alexsavio/boyle
 
@@ -21,14 +22,20 @@ Please see the requirements.txt file.
 Install
 =======
 
-Before installing it, you need all the requirements installed.
-These are listed in the requirements.txt files.
-The best way to install them is running the following command:
+This package uses setuptools and Makefiles. 
 
-    for r in \`cat boyle/requirements.txt\`; do pip install $r; done
+I've made a workaround to deal with build dependencies of some requirements.
+So there are two requirements files: requirements.txt and pip-requirements.txt.
+The requirements.txt dependencies must be installed one by one, with:
 
-This package uses distutils, which is the default way of installing
-python modules. To install in your home directory, use::
+    make install_deps
+
+The following command will install everything with all dependencies:
+
+    make install
+    
+If you already have the dependencies listed in requirements.txt installed, 
+to install in your home directory, use::
 
     python setup.py install --user
 
@@ -37,6 +44,9 @@ To install for all users on Unix/Linux::
     python setup.py build
     sudo python setup.py install
 
+You can also install it in development mode with::
+
+    make develop
 
 Development
 ===========
@@ -49,11 +59,11 @@ Github
 
 You can check the latest sources with the command::
 
-    git clone https://www.github.com/Neurita/boyle.git
+    git clone https://www.github.com/neurita/boyle.git
 
 or if you have write privileges::
 
-    git clone git@github.com:Neurita/boyle.git
+    git clone git@github.com:neurita/boyle.git
 
 If you are going to create patches for this project, create a branch for it 
 from the master branch.
