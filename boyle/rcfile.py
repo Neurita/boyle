@@ -4,6 +4,7 @@
 from __future__ import unicode_literals, print_function
 from os.path import join, expanduser
 import os
+import socket
 import logging
 
 __version__ = "0.1.1"
@@ -13,9 +14,10 @@ __license__ = "MIT"
 log = logging.getLogger(__name__)
 
 try:  # Python 2
-    import ConfigParser
+    import ConfigParser as confiparser
 except ImportError:  # Python 3
-    import configparser as ConfigParser
+    import configparser
+from configparser import ExtendedInterpolation
 
 
 def merge(dict_1, dict_2):
@@ -45,18 +47,26 @@ def get_config(appname, config_file):
         join(home, '.config', appname),
         join(home, '.%s' % appname, 'config'),
         join(home, '.%src' % appname),
+        '%src' % appname,
         '.%src' % appname,
         config_file or ''
     ]
 
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser(interpolation=ExtendedInterpolation())
     read = config.read(files)
     log.debug('files read: %s' % read) 
 
-    if not config.has_section(appname):
-        return {}
+    cfg_items = {}
+    if config.has_section(appname):
+        cfg_items = dict(config.items(appname))
 
-    return dict(config.items(appname))
+    hn = socket.gethostname()
+    host_section = '{}:{}'.format(appname, hn)
+    if config.has_section(host_section):
+        host_items = dict(config.items(host_section))
+        cfg_items = merge(host_items, cfg_items)
+
+    return cfg_items
 
 
 def rcfile(appname, args={}, strip_dashes=True):
@@ -95,14 +105,25 @@ def rcfile(appname, args={}, strip_dashes=True):
             [appname]
             var=1
 
+        We can also have host-dependent configuration values, which have 
+        priority over the default appname values.
+
+            [appname]
+            var=1
+
+            [appname:mylinux]
+            var=3
+
+
         Files are read from: /etc/appname/config, 
                              /etc/appfilerc, 
                              ~/.config/appname/config, 
                              ~/.config/appname,
                              ~/.appname/config,
                              ~/.appnamerc,
-                             .appnamerc, 
-        file provided by config variable in args.
+                             appnamerc,
+                             .appnamerc,
+                             file provided by config variable in args.
 
         Example
         -------
@@ -117,4 +138,77 @@ def rcfile(appname, args={}, strip_dashes=True):
     config = get_config(appname, args.get('config', ''))
 
     return merge(merge(args, config), environ)
+
+
+#class HostExtendedInterpolation(ExtendedInterpolation):
+#    """Advanced variant of interpolation, supports the syntax used by
+#    `zc.buildout'. Enables interpolation between sections."""
+
+#    _KEYCRE = re.compile(r"\$\{([^}]+)\}")
+
+#    def before_get(self, parser, section, option, value, defaults):
+#        L = []
+#        self._interpolate_some(parser, option, L, value, section, defaults, 1)
+#        return ''.join(L)
+
+#    def before_set(self, parser, section, option, value):
+#        tmp_value = value.replace('$$', '') # escaped dollar signs
+#        tmp_value = self._KEYCRE.sub('', tmp_value) # valid syntax
+#        if '$' in tmp_value:
+#            raise ValueError("invalid interpolation syntax in %r at "
+#                             "position %d" % (value, tmp_value.find('$')))
+#        return value
+
+#    def _interpolate_some(self, parser, option, accum, rest, section, map,
+#                          depth):
+#        if depth > MAX_INTERPOLATION_DEPTH:
+#            raise InterpolationDepthError(option, section, rest)
+#        while rest:
+#            p = rest.find("$")
+#            if p < 0:
+#                accum.append(rest)
+#                return
+#            if p > 0:
+#                accum.append(rest[:p])
+#                rest = rest[p:]
+#            # p is no longer used
+#            c = rest[1:2]
+#            if c == "$":
+#                accum.append("$")
+#                rest = rest[2:]
+#            elif c == "{":
+#                m = self._KEYCRE.match(rest)
+#                if m is None:
+#                    raise InterpolationSyntaxError(option, section,
+#                        "bad interpolation variable reference %r" % rest)
+#                path = m.group(1).split(':')
+#                rest = rest[m.end():]
+#                sect = section
+#                opt = option
+#                try:
+#                    if len(path) == 1:
+#                        opt = parser.optionxform(path[0])
+#                        v = map[opt]
+#                    elif len(path) == 2:
+#                        sect = path[0]
+#                        opt = parser.optionxform(path[1])
+#                        v = parser.get(sect, opt, raw=True)
+#                    else:
+#                        raise InterpolationSyntaxError(
+#                            option, section,
+#                            "More than one ':' found: %r" % (rest,))
+#                except (KeyError, NoSectionError, NoOptionError):
+#                    raise InterpolationMissingOptionError(
+#                        option, section, rest, ":".join(path))
+#                if "$" in v:
+#                    self._interpolate_some(parser, opt, accum, v, sect,
+#                                           dict(parser.items(sect, raw=True)),
+#                                           depth + 1)
+#                else:
+#                    accum.append(v)
+#            else:
+#                raise InterpolationSyntaxError(
+#                    option, section,
+#                    "'$' must be followed by '$' or '{', "
+#                    "found: %r" % (rest,))
 
