@@ -11,18 +11,20 @@ log = logging.getLogger(__name__)
 
 
 class NiftiSubjectsSet(ItemSet):
+    """A set of subjects where each subject is represented by a Nifti file path.
 
-    def __init__(self, subj_files, mask_file=None, all_same_shape=True):
-        """
-
-        :param subj_files: list or dict of str
+    Parameters
+    ----------
+    subj_files: list or dict of str
         file_path -> int/str
 
-        :param mask_file: str
+    mask_file: str
 
-        :param all_same_size: bool
+    all_same_size: bool
         True if all the subject files must have the same shape
-        """
+    """
+
+    def __init__(self, subj_files, mask_file=None, all_same_shape=True):
         self.items = []
         self.labels = []
         self.all_same_shape = all_same_shape
@@ -35,9 +37,10 @@ class NiftiSubjectsSet(ItemSet):
 
     def _init_subj_data(self, subj_files):
         """
-
-        :param subj_files:
-        :return:
+        Parameters
+        ----------
+        subj_files: list or dict of str
+            file_path -> int/str
         """
         try:
             if isinstance(subj_files, list):
@@ -52,8 +55,6 @@ class NiftiSubjectsSet(ItemSet):
 
     def _check_subj_shapes(self):
         """
-
-        :return:
         """
         #TODO: check mask shape too
         shape = self.items[0].shape
@@ -66,11 +67,14 @@ class NiftiSubjectsSet(ItemSet):
     @staticmethod
     def _load_image(file_path):
         """
+        Parameters
+        ----------
+        file_path: str
+            Path to the nifti file
 
-        :param file_path: str
-         Path to the nifti file
-
-        :return: nipy.Image with a file_path member
+        Returns
+        -------
+        nipy.Image with a file_path member
         """
         try:
             nii_img = load_nipy_img(file_path)
@@ -78,14 +82,18 @@ class NiftiSubjectsSet(ItemSet):
             return nii_img
         except Exception as exc:
             log.exception('Reading file {0}.'.format(file_path))
+            raise
 
     @staticmethod
     def _smooth_img(nii_img, smooth_mm):
         """
+        Parameters
+        ----------
+        nii_img: nipy.Image
 
-        :param nii_img: nipy.Image
-
-        :return smooth nipy.Image
+        Returns
+        -------
+        smoothed nipy.Image
         """
         if smooth_mm <= 0:
             return nii_img
@@ -95,8 +103,10 @@ class NiftiSubjectsSet(ItemSet):
 
     def from_dict(self, subj_files):
         """
-
-        :param subj_files:
+        Parameters
+        ----------
+        subj_files: dict of str
+            file_path -> int/str
         """
         for group_label in subj_files:
             try:
@@ -112,9 +122,10 @@ class NiftiSubjectsSet(ItemSet):
 
     def from_list(self, subj_files):
         """
-
-        :param subj_files:
-        :return:
+        Parameters
+        ----------
+        subj_files: list of str
+            file_paths
         """
         for sf in subj_files:
             try:
@@ -133,10 +144,11 @@ class NiftiSubjectsSet(ItemSet):
 
     def set_labels(self, subj_labels):
         """
-
-        :param subj_labels: list of int or str
-         This list will be checked to have the same size as files list
-         (self.items)
+        Parameters
+        ----------
+        subj_labels: list of int or str
+            This list will be checked to have the same size as files list
+            (self.items)
         """
         if len(subj_labels) != self.n_subjs:
             log.error('The number of given labels is not the same '
@@ -148,20 +160,22 @@ class NiftiSubjectsSet(ItemSet):
         """
         Creates a Numpy array with the data.
 
-        :param smooth__mm: int
-        Integer indicating the size of the FWHM Gaussian smoothing kernel
-        to smooth the subject volumes before creating the data matrix
+        Parameters
+        ----------
+        smooth__mm: int
+            Integer indicating the size of the FWHM Gaussian smoothing kernel
+            to smooth the subject volumes before creating the data matrix
 
-        :param smooth_mask: bool
-        If True, will smooth the mask with the same kernel.
+        smooth_mask: bool
+            If True, will smooth the mask with the same kernel.
 
-        :param outdtype: dtype
-        Type of the elements of the array, if None will obtain the dtype from
-        the first nifti file.
+        outdtype: dtype
+            Type of the elements of the array, if None will obtain the dtype from
+            the first nifti file.
 
-        Returns:
-        --------
-        :return: outmat, vol_shape,
+        Returns
+        -------
+        outmat, mask_indices, vol_shape
 
         outmat: Numpy array with shape N x prod(vol.shape)
                 containing the N files as flat vectors.
@@ -203,6 +217,7 @@ class NiftiSubjectsSet(ItemSet):
                     outmat[i, :] = vol.flatten()
         except Exception as exc:
             log.exception('Flattening file {0}'.format(vf.file_path))
+            raise
 
         return outmat, mask_indices, mask_shape
 
