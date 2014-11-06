@@ -8,6 +8,7 @@ boyle is a set of tools for management and conversion of
 clinical and neuroimaging data.
 
 """
+
 from __future__ import print_function
 
 import os.path as op
@@ -18,6 +19,22 @@ from setuptools.command.test import test as TestCommand
 from pip.req import parse_requirements
 from install_deps import get_requirements
 
+
+#long description
+def read(*filenames, encoding='utf-8', sep='\n'):
+    buf = []
+    for filename in filenames:
+        with io.open(filename, encoding=encoding) as f:
+            buf.append(f.read())
+    return sep.join(buf)
+
+
+# Get version without importing, which avoids dependency issues
+module_name = find_packages(exclude=['tests'])[0]
+version_pyfile = op.join(module_name, 'version.py')
+exec(compile(read(version_pyfile), version_pyfile, 'exec'))
+
+
 script_path = 'scripts'
 
 #install_reqs = parse_requirements('requirements.txt')
@@ -26,20 +43,9 @@ req_files = ['requirements.txt', 'pip_requirements.txt']
 LICENSE = 'new BSD'
 
 
-#long description
-def read(*filenames, **kwargs):
-    encoding = kwargs.get('encoding', 'utf-8')
-    sep = kwargs.get('sep', '\n')
-    buf = []
-    for filename in filenames:
-        with io.open(filename, encoding=encoding) as f:
-            buf.append(f.read())
-    return sep.join(buf)
-
-
 setup_dict = dict(
-    name='boyle',
-    version='0.1.0',
+    name=module_name,
+    version=__version__,
     description='Medical Image Conversion and Input/Output Tools',
 
     license='BSD 3-Clause',
@@ -62,7 +68,7 @@ setup_dict = dict(
 
     platforms='Linux/MacOSX',
 
-    #https://pypi.python.org/pypi?%3Aaction=list_classifiers
+    # https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
         'Programming Language :: Python',
         'Development Status :: 3 - Alpha',
@@ -84,12 +90,12 @@ setup_dict = dict(
     ],
 
     extras_require={
-        'testing': ['pytest'],
+        'testing': ['pytest', 'pytest-cov'],
     }
 )
 
 
-#Python3 support keywords
+# Python3 support keywords
 if sys.version_info >= (3,):
     setup_dict['use_2to3'] = False
     setup_dict['convert_2to3_doctests'] = ['']
@@ -97,6 +103,11 @@ if sys.version_info >= (3,):
 
 
 class PyTest(TestCommand):
+    user_options = [('pytest-args=', 'a', "Arguments to pass to py.test")]
+
+    def initialize_options(self):
+        TestCommand.initialize_options(self)
+        self.pytest_args = []
 
     def finalize_options(self):
         TestCommand.finalize_options(self)
@@ -104,9 +115,10 @@ class PyTest(TestCommand):
         self.test_suite = True
 
     def run_tests(self):
+        # import here, cause outside the eggs aren't loaded
         import pytest
-        errcode = pytest.main(self.test_args)
-        sys.exit(errcode)
+        errno = pytest.main(self.pytest_args)
+        sys.exit(errno)
 
 
 setup_dict.update(dict(tests_require=['pytest'],
@@ -115,3 +127,4 @@ setup_dict.update(dict(tests_require=['pytest'],
 
 if __name__ == '__main__':
     setup(**setup_dict)
+

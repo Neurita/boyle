@@ -1,5 +1,7 @@
 .PHONY: help clean clean-pyc clean-build list test test-all coverage docs release sdist install develop install_deps
 
+project-name = boyle
+
 help:
 	@echo "clean-build - remove build artifacts"
 	@echo "clean-pyc - remove Python file artifacts"
@@ -35,7 +37,7 @@ clean-pyc:
 	find . -name '*~' -exec rm -f {} +
 
 lint:
-	flake8 boyle test
+	flake8 $(project-name) test
 
 test:
 	py.test
@@ -44,15 +46,15 @@ test-all:
 	tox
 
 coverage:
-	coverage run --source boyle setup.py test
+	coverage run --source $(project-name) setup.py test
 	coverage report -m
 	coverage html
 	open htmlcov/index.html
 
 docs:
-	rm -f docs/boyle.rst
+	rm -f docs/$(project-name).rst
 	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ boyle
+	sphinx-apidoc -o docs/ $(project-name)
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 	open docs/_build/html/index.html
