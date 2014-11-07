@@ -255,9 +255,8 @@ def recursive_glob(base_directory, regex=None):
 
     files = glob(os.path.join(base_directory, regex))
     for path, dirlist, filelist in os.walk(base_directory):
-        if not is_ignored(path):
-            for dir_name in dirlist:
-                files.extend(glob(op.join(path, dir_name, regex)))
+        for dir_name in dirlist:
+            files.extend(glob(op.join(path, dir_name, regex)))
 
     return files
 
