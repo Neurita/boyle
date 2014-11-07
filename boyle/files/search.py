@@ -167,7 +167,7 @@ def iter_recursive_find(folder_path, *regex):
     Returns absolute paths of files that match the regexs within file_dir and
     all its children folders.
 
-    This is an iterator function that will use yield to return each set of 
+    This is an iterator function that will use yield to return each set of
     file_paths in one iteration.
 
     Will only return value if all the strings in regex match a file name.
@@ -232,3 +232,39 @@ def find_match(base_directory, regex=None):
         regex = ''
 
     return glob(os.path.join(base_directory, regex))
+
+
+def recursive_glob(base_directory, regex=None):
+    """
+    Uses glob to find all files or folders that match the regex
+    starting from the base_directory.
+
+    Parameters
+    ----------
+    base_directory: str
+
+    regex: str
+
+    Returns
+    -------
+    files: list
+
+    """
+    if regex is None:
+        regex = ''
+
+    files = glob(os.path.join(base_directory, regex))
+    for path, dirlist, filelist in os.walk(base_directory):
+        if not is_ignored(path):
+            for dir_name in dirlist:
+                files.extend(glob(op.join(path, dir_name, regex)))
+
+    return files
+
+
+def recursive_remove(work_dir=CWD, regex='*'):
+    [os.remove(fn) for fn in recursive_glob(work_dir, regex)]
+
+
+def recursive_rmtrees(work_dir=CWD, regex='*'):
+    [shutil.rmtree(fn, ignore_errors=True) for fn in recursive_glob(work_dir, regex)]
