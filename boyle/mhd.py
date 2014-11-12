@@ -15,6 +15,7 @@ import array
 
 from distutils import *
 
+
 MHD_TAGS = ['ObjectType', 'NDims', 'BinaryData', 'BinaryDataByteOrderMSB', 'CompressedData',
             'CompressedDataSize', 'TransformMatrix', 'Offset', 'CenterOfRotation',
             'AnatomicalOrientation', 'ElementSpacing', 'DimSize', 'ElementType',
@@ -33,6 +34,7 @@ MHD_TO_NUMPY_TYPE = {'MET_FLOAT': np.float,
                      'MET_ULONG': np.int64,
                      'MET_FLOAT': np.float32,
                      'MET_DOUBLE': np.float64}
+
 
 NUMPY_TO_MHD_TYPE = {v: k for k, v in MHD_TO_NUMPY_TYPE.items()}
 
