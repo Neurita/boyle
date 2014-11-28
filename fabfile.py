@@ -4,35 +4,33 @@
 Install the packages you have listed in the requirements file you input as
 first argument.
 """
+from   __future__ import (absolute_import, division, print_function, unicode_literals)
 
-from __future__ import (absolute_import, division, print_function, 
-                        unicode_literals)
+from   fabric.api import task, local
 
-from fabric.api import task, local, cd
-
-import sys
 import os
-import os.path as op
-import fileinput
+import os.path    as     op
 import subprocess
 import shutil
 
-from glob import glob
-from setuptools import Command, setup, find_packages
-from pip.req import parse_requirements
+from   glob       import glob
+from   setuptools import find_packages
+from   pip.req    import parse_requirements
 
 # Get version without importing, which avoids dependency issues
-module_name = find_packages(exclude=['tests'])[0]
+module_name    = find_packages(exclude=['tests'])[0]
 version_pyfile = op.join(module_name, 'version.py')
 exec(compile(open(version_pyfile).read(), version_pyfile, 'exec'))
 
-#get current dir
+# get current dir
 CWD = op.realpath(op.curdir)
+
+#ignore dirs
+IGNORE = ['.git', '.idea']
 
 
 def get_requirements(*args):
-    """Parse all requirements files given and return a list of the 
-       dependencies"""
+    """Parse all requirements files given and return a list of the dependencies"""
     install_deps = []
     try:
         for fpath in args:
@@ -44,24 +42,27 @@ def get_requirements(*args):
 
 
 def recursive_glob(base_directory, regex=None):
-    """
-    Uses glob to find all files that match the regex
-    in base_directory.
+    """Uses glob to find all files that match the regex in base_directory.
 
     @param base_directory: string
 
     @param regex: string
 
     @return: set
-
     """
     if regex is None:
         regex = ''
 
     files = glob(os.path.join(base_directory, regex))
     for path, dirlist, filelist in os.walk(base_directory):
+        for ignored in IGNORE:
+            try:
+                dirlist.remove(ignored)
+            except:
+                pass
+
         for dir_name in dirlist:
-            files.extend(glob(os.path.join(dir_name, regex)))
+            files.extend(glob(os.path.join(path, dir_name, regex)))
 
     return files
 
@@ -76,7 +77,7 @@ def recursive_rmtrees(work_dir=CWD, regex='*'):
 
 @task
 def install_deps():
-    #for line in fileinput.input():
+    # for line in fileinput.input():
     req_filepaths = ['requirements.txt']
 
     deps = get_requirements(*req_filepaths)
@@ -85,7 +86,7 @@ def install_deps():
         for dep_name in deps:
             cmd = "pip install '{0}'".format(dep_name)
             print('#', cmd)
-            subprocess.check_call(cmd, shell=True)
+            local(cmd)
     except:
         print('Error installing {}'.format(dep_name))
 
@@ -119,8 +120,11 @@ def clean(work_dir=CWD):
 def clean_build(work_dir=CWD):
     shutil.rmtree('build', ignore_errors=True)
     shutil.rmtree('dist', ignore_errors=True)
+    shutil.rmtree('.eggs', ignore_errors=True)
     recursive_rmtrees(work_dir, '__pycache__')
     recursive_rmtrees(work_dir, '*.egg-info')
+    recursive_rmtrees(work_dir, '*.egg')
+    recursive_rmtrees(work_dir, '.ipynb_checkpoints')
 
 
 @task
@@ -136,8 +140,16 @@ def lint():
 
 
 @task
-def test():
-    local('py.test')
+def test(filepath=''):
+    if filepath:
+        if not op.exists(filepath):
+            print('Error: could not find file {}'.format(filepath))
+            exit(-1)
+        cmd = 'python setup.py test -a ' + filepath
+    else:
+        cmd = 'python setup.py test'
+
+    local(cmd)
 
 
 @task
@@ -168,8 +180,10 @@ def docs(doc_type='html'):
 @task
 def release():
     clean()
-    local('python setup.py sdist upload')
-    local('python setup.py bdist_wheel upload')
+    local('pip install -U pip setuptools twine wheel')
+    local('python setup.py sdist bdist_wheel')
+    #local('python setup.py bdist_wheel upload')
+    local('twine upload dist/*')
 
 
 @task
