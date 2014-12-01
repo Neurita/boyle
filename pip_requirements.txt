@@ -1,7 +1,7 @@
 #pip install the rest
-h5py==2.3.1
-pandas==0.15
-python-Levenshtein==0.11.2
-Baker==1.3
-pyyaml==3.11
-tabulate==0.7.3
+h5py>=2.3.1
+pandas>=0.15
+python-Levenshtein>=0.11.2
+Baker>=1.3
+pyyaml>=3.11
+tabulate>=0.7.3
