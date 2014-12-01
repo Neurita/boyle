@@ -4,7 +4,7 @@
 Boyle
 -----
 
-boyle is a set of tools for management and conversion of 
+boyle is a set of tools for management and conversion of
 clinical and neuroimaging data.
 
 """
@@ -20,13 +20,13 @@ from pip.req import parse_requirements
 from install_deps import get_requirements
 
 
-#long description
-def read(*filenames, encoding='utf-8', sep='\n'):
+# long description
+def read(*filenames):
     buf = []
     for filename in filenames:
-        with io.open(filename, encoding=encoding) as f:
+        with io.open(filename, encoding='utf-8') as f:
             buf.append(f.read())
-    return sep.join(buf)
+    return '\n'.join(buf)
 
 
 # Get version without importing, which avoids dependency issues
@@ -37,7 +37,7 @@ exec(compile(read(version_pyfile), version_pyfile, 'exec'))
 
 script_path = 'scripts'
 
-#install_reqs = parse_requirements('requirements.txt')
+# install_reqs = parse_requirements('requirements.txt')
 req_files = ['requirements.txt', 'pip_requirements.txt']
 
 LICENSE = 'new BSD'
@@ -62,7 +62,7 @@ setup_dict = dict(
 
     scripts=[op.join(script_path, 'convert.py'),
              op.join(script_path, 'filetree.py'),
-             op.join(script_path, 'compare_id_sets.py'),],
+             op.join(script_path, 'compare_id_sets.py')],
 
     long_description=read('README.rst', 'CHANGES.rst'),
 
@@ -127,4 +127,3 @@ setup_dict.update(dict(tests_require=['pytest'],
 
 if __name__ == '__main__':
     setup(**setup_dict)
-

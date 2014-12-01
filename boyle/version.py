@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-# License: new BSD clause
 '''
 Unique version information place
 '''
