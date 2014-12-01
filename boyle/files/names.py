@@ -38,7 +38,7 @@ def get_files(folderpath):
             os.walk(folderpath) for f in filenames]
 
 
-def get_extension(filepath, check_if_exists=False):
+def get_extension(filepath, check_if_exists=False, allowed_exts=ALLOWED_EXTS):
     """Return the extension of fpath.
 
     Parameters
@@ -47,6 +47,11 @@ def get_extension(filepath, check_if_exists=False):
     File name or path
 
     check_if_exists: bool
+
+    allowed_exts: dict
+    Dictionary of strings, where the key if the last part of a complex ('.' separated) extension
+    and the value is the previous part.
+    For example: for the '.nii.gz' extension I would have a dict as {'.gz': '.nii'}
 
     Returns
     -------
@@ -61,8 +66,8 @@ def get_extension(filepath, check_if_exists=False):
 
     try:
         rest, ext = op.splitext(filepath)
-        if ext in ALLOWED_EXTS:
-            alloweds = ALLOWED_EXTS[ext]
+        if ext in allowed_exts:
+            alloweds = allowed_exts[ext]
             _, ext2 = op.splitext(filepath)
             if ext2 in alloweds:
                 ext = ext2 + ext
