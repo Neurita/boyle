@@ -32,7 +32,7 @@ def read(*filenames):
 # Get version without importing, which avoids dependency issues
 module_name = find_packages(exclude=['tests'])[0]
 version_pyfile = op.join(module_name, 'version.py')
-exec(compile(read(version_pyfile), version_pyfile, 'exec'))
+exec(compile(open(version_pyfile).read(), version_pyfile, 'exec'))
 
 
 script_path = 'scripts'
