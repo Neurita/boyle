@@ -17,24 +17,40 @@ from functools import reduce
 
 
 # the order of these tags matter
-MHD_TAGS = ['ObjectType', 'NDims', 'BinaryData', 'BinaryDataByteOrderMSB', 'CompressedData',
-            'CompressedDataSize', 'TransformMatrix', 'Offset', 'CenterOfRotation',
-            'AnatomicalOrientation', 'ElementSpacing', 'DimSize', 'ElementType',
-            'ElementDataFile', 'Comment', 'SeriesDescription', 'AcquisitionDate',
-            'AcquisitionTime', 'StudyDate', 'StudyTime']
+MHD_TAGS = ['ObjectType',
+            'NDims',
+            'BinaryData',
+            'BinaryDataByteOrderMSB',
+            'CompressedData',
+            'CompressedDataSize',
+            'TransformMatrix',
+            'Offset',
+            'CenterOfRotation',
+            'AnatomicalOrientation',
+            'ElementSpacing',
+            'DimSize',
+            'ElementType',
+            'ElementDataFile',
+            'Comment',
+            'SeriesDescription',
+            'AcquisitionDate',
+            'AcquisitionTime',
+            'StudyDate',
+            'StudyTime']
 
 
-MHD_TO_NUMPY_TYPE = {'MET_FLOAT':  np.float,
-                     'MET_UCHAR':  np.uint8,
-                     'MET_CHAR':   np.int8,
-                     'MET_USHORT': np.uint8,
-                     'MET_SHORT':  np.int8,
-                     'MET_UINT':   np.uint32,
-                     'MET_INT':    np.int32,
-                     'MET_ULONG':  np.uint64,
-                     'MET_ULONG':  np.int64,
-                     'MET_FLOAT':  np.float32,
-                     'MET_DOUBLE': np.float64}
+MHD_TO_NUMPY_TYPE   = {'MET_FLOAT' : np.float,
+                       'MET_UCHAR' : np.uint8,
+                       'MET_CHAR'  : np.int8,
+                       'MET_USHORT': np.uint8,
+                       'MET_SHORT' : np.int8,
+                       'MET_UINT'  : np.uint32,
+                       'MET_INT'   : np.int32,
+                       'MET_ULONG' : np.uint64,
+                       'MET_ULONG' : np.int64,
+                       'MET_FLOAT' : np.float32,
+                       'MET_DOUBLE': np.float64}
+
 
 NDARRAY_TO_ARRAY_TYPE = {np.float  : 'f',
                          np.uint8  : 'H',
@@ -48,8 +64,10 @@ NDARRAY_TO_ARRAY_TYPE = {np.float  : 'f',
                          np.float32: 'f',
                          np.float64: 'd',}
 
+
 NUMPY_TO_MHD_TYPE = {v: k for k, v in MHD_TO_NUMPY_TYPE.items()}
 #ARRAY_TO_NDARRAY_TYPE = {v: k for k, v in NDARRAY_TO_ARRAY_TYPE.items()}
+
 
 def read_meta_header(filename):
     """Return a dictionary of meta data from meta header file"""
