@@ -16,6 +16,7 @@ import array
 from functools import reduce
 
 
+# the order of these tags matter
 MHD_TAGS = ['ObjectType', 'NDims', 'BinaryData', 'BinaryDataByteOrderMSB', 'CompressedData',
             'CompressedDataSize', 'TransformMatrix', 'Offset', 'CenterOfRotation',
             'AnatomicalOrientation', 'ElementSpacing', 'DimSize', 'ElementType',
@@ -38,8 +39,8 @@ MHD_TO_NUMPY_TYPE = {'MET_FLOAT':  np.float,
 NDARRAY_TO_ARRAY_TYPE = {np.float  : 'f',
                          np.uint8  : 'H',
                          np.int8   : 'h',
-                         np.uint16 : 'H',
-                         np.int16  : 'h',
+                         np.uint16 : 'I',
+                         np.int16  : 'i',
                          np.uint32 : 'I',
                          np.int32  : 'i',
                          np.uint64 : 'I',
@@ -48,7 +49,7 @@ NDARRAY_TO_ARRAY_TYPE = {np.float  : 'f',
                          np.float64: 'd',}
 
 NUMPY_TO_MHD_TYPE = {v: k for k, v in MHD_TO_NUMPY_TYPE.items()}
-ARRAY_TO_NDARRAY_TYPE = {v: k for k, v in NDARRAY_TO_ARRAY_TYPE.items()}
+#ARRAY_TO_NDARRAY_TYPE = {v: k for k, v in NDARRAY_TO_ARRAY_TYPE.items()}
 
 def read_meta_header(filename):
     """Return a dictionary of meta data from meta header file"""
@@ -79,27 +80,23 @@ def load_raw_data_with_mhd(filename):
     assert(meta_dict['ElementType'] in MHD_TO_NUMPY_TYPE)
 
     arr = [int(i) for i in meta_dict['DimSize'].split()]
-
     volume = reduce(lambda x, y: x*y, arr[0:dim-1], 1)
 
     pwd = op.dirname(filename)
-    if pwd:
-        data_file = op.join(pwd, meta_dict['ElementDataFile'])
-    else:
-        data_file = meta_dict['ElementDataFile']
+    raw_file = meta_dict['ElementDataFile']
+    data_file = op.join(pwd, raw_file)
 
     ndtype  = MHD_TO_NUMPY_TYPE[meta_dict['ElementType']]
     arrtype = NDARRAY_TO_ARRAY_TYPE[ndtype]
 
-    fid       = open(data_file, 'rb')
-    binvalues = array.array(arrtype)
-    binvalues.fromfile(fid, volume*arr[dim-1])
-    fid.close()
+    with open(data_file, 'rb') as fid:
+        binvalues = array.array(arrtype)
+        binvalues.fromfile(fid, volume*arr[dim-1])
 
     data = np.array  (binvalues, ndtype)
     data = np.reshape(data, (arr[dim-1], volume))
 
-    if meta_dict['NDims'] == 3:
+    if dim == 3:
         # Begin 3D fix
         dimensions = [int(i) for i in meta_dict['DimSize'].split()]
         dimensions.reverse()
