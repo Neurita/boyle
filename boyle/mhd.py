@@ -23,21 +23,32 @@ MHD_TAGS = ['ObjectType', 'NDims', 'BinaryData', 'BinaryDataByteOrderMSB', 'Comp
             'AcquisitionTime', 'StudyDate', 'StudyTime']
 
 
-MHD_TO_NUMPY_TYPE = {'MET_FLOAT': np.float,
-                     'MET_UCHAR': np.uint8,
-                     'MET_CHAR': np.int8,
-                     'MET_USHORT': np.uint16,
-                     'MET_SHORT': np.int16,
-                     'MET_UINT': np.uint32,
-                     'MET_INT': np.int32,
-                     'MET_ULONG': np.uint64,
-                     'MET_ULONG': np.int64,
-                     'MET_FLOAT': np.float32,
+MHD_TO_NUMPY_TYPE = {'MET_FLOAT':  np.float,
+                     'MET_UCHAR':  np.uint8,
+                     'MET_CHAR':   np.int8,
+                     'MET_USHORT': np.uint8,
+                     'MET_SHORT':  np.int8,
+                     'MET_UINT':   np.uint32,
+                     'MET_INT':    np.int32,
+                     'MET_ULONG':  np.uint64,
+                     'MET_ULONG':  np.int64,
+                     'MET_FLOAT':  np.float32,
                      'MET_DOUBLE': np.float64}
 
+NDARRAY_TO_ARRAY_TYPE = {np.float  : 'f',
+                         np.uint8  : 'H',
+                         np.int8   : 'h',
+                         np.uint16 : 'H',
+                         np.int16  : 'h',
+                         np.uint32 : 'I',
+                         np.int32  : 'i',
+                         np.uint64 : 'I',
+                         np.int64  : 'i',
+                         np.float32: 'f',
+                         np.float64: 'd',}
 
 NUMPY_TO_MHD_TYPE = {v: k for k, v in MHD_TO_NUMPY_TYPE.items()}
-
+ARRAY_TO_NDARRAY_TYPE = {v: k for k, v in NDARRAY_TO_ARRAY_TYPE.items()}
 
 def read_meta_header(filename):
     """Return a dictionary of meta data from meta header file"""
@@ -63,26 +74,29 @@ def read_meta_header(filename):
 
 def load_raw_data_with_mhd(filename):
     meta_dict = read_meta_header(filename)
-    dim = int(meta_dict['NDims'])
-    # print dim
-    # print meta_dict['ElementType']
+    dim       = int(meta_dict['NDims'])
+
     assert(meta_dict['ElementType'] in MHD_TO_NUMPY_TYPE)
 
     arr = [int(i) for i in meta_dict['DimSize'].split()]
-    # print arr
+
     volume = reduce(lambda x, y: x*y, arr[0:dim-1], 1)
-    # print volume
-    pwd = os.path.split(filename)[0]
+
+    pwd = op.dirname(filename)
     if pwd:
         data_file = op.join(pwd, meta_dict['ElementDataFile'])
     else:
         data_file = meta_dict['ElementDataFile']
-    # print data_file
-    fid = open(data_file, 'rb')
-    binvalues = array.array('f')
+
+    ndtype  = MHD_TO_NUMPY_TYPE[meta_dict['ElementType']]
+    arrtype = NDARRAY_TO_ARRAY_TYPE[ndtype]
+
+    fid       = open(data_file, 'rb')
+    binvalues = array.array(arrtype)
     binvalues.fromfile(fid, volume*arr[dim-1])
     fid.close()
-    data = np.array(binvalues, MHD_TO_NUMPY_TYPE[meta_dict['ElementType']])
+
+    data = np.array  (binvalues, ndtype)
     data = np.reshape(data, (arr[dim-1], volume))
 
     if meta_dict['NDims'] == 3:
