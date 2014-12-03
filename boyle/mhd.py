@@ -80,7 +80,7 @@ def load_raw_data_with_mhd(filename):
     # print data_file
     fid = open(data_file, 'rb')
     binvalues = array.array('f')
-    binvalues.read(fid, volume*arr[dim-1])
+    binvalues.fromfile(fid, volume*arr[dim-1])
     fid.close()
     data = np.array(binvalues, MHD_TO_NUMPY_TYPE[meta_dict['ElementType']])
     data = np.reshape(data, (arr[dim-1], volume))
