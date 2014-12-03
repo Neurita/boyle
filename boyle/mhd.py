@@ -13,6 +13,7 @@ import os
 import os.path as op
 import numpy as np
 import array
+from functools import reduce
 
 
 MHD_TAGS = ['ObjectType', 'NDims', 'BinaryData', 'BinaryDataByteOrderMSB', 'CompressedData',
