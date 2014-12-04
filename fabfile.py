@@ -10,7 +10,6 @@ from   fabric.api import task, local
 
 import os
 import os.path    as     op
-import subprocess
 import shutil
 
 from   glob       import glob
