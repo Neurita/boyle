@@ -139,7 +139,7 @@ class DicomGenericSet(DicomFileSet):
         Path or paths to folders to be searched for Dicom files
 
         :param read_metadata: bool
-        If True, will either make a list of DicomFiles, or
+        If True, will make a list of DicomFiles, otherwise will store
         a simple DICOM header (namedtuples) with the fields specified
         in header_fields.
 
