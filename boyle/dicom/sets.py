@@ -5,8 +5,7 @@ from collections import defaultdict, namedtuple
 
 from .utils import (find_all_dicom_files, is_dicom_file, DicomFile)
 
-from ..config import (DICOM_FILE_EXTENSIONS,
-                      OUTPUT_DICOM_EXTENSION)
+from ..config import (DICOM_FILE_EXTENSIONS, OUTPUT_DICOM_EXTENSION)
 from ..exceptions import FolderNotFound
 from ..files.names import get_abspath
 from ..more_collections import ItemSet
@@ -149,7 +148,7 @@ class DicomGenericSet(DicomFileSet):
         If store_metadata is False, this won't be used. Else and if this is
         None, will store the whole DicomFile.
         """
-        super(DicomGenericSet, self).__init__(self, folders)
+        DicomFileSet.__init__(self,  folders)
         self.read_dcm = self.get_dcm_reader(read_metadata, header_fields)
 
     @staticmethod
