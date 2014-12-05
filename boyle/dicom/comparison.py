@@ -7,12 +7,12 @@ import numpy as np
 from ..more_collections import DefaultOrderedDict, merge_dict_of_lists
 from ..files.names import get_folder_subpath
 from ..config import DICOM_FIELD_WEIGHTS
+from ..utils.validation import check_X_y
 
 from .utils import DicomFile
 from .sets import DicomFileSet
 
 log = logging.getLogger(__name__)
-
 
 
 class DistanceMeasure(object):
@@ -152,10 +152,7 @@ class DicomFileDistance(DistanceMeasure):
                 return 1
 
             try:
-                if str1 == str2:
-                   simil = 1
-                else:
-                   simil = self.similarity_measure(str1, str2)
+                simil = self.similarity_measure(str1, str2) if str1 != str2 else 1
 
                 if simil > 0:
                     weight = self.field_weights[field_name]
@@ -238,34 +235,91 @@ def group_dicom_files(dicom_file_paths, header_fields):
     return path_groups
 
 
+def copy_groups_to_folder(self, dicom_groups, folder_path, groupby_field_name=None):
+    """Copy the DICOM file groups to folder_path. Each group will be copied into
+    a subfolder with named given by groupby_field.
+
+    Parameters
+    ----------
+    dicom_groups: boyle.dicom.sets.DicomFileSet
+
+    folder_path: str
+     Path to where copy the DICOM files.
+
+    groupby_field_name: str
+     DICOM field name. Will get the value of this field to name the group
+     folder. If empty or None will use the basename of the group key file.
+    """
+    def create_folder(path):
+        if not os.path.exists(path):
+            try:
+                os.mkdir(path)
+            except Exception:
+                log.exception('Error creating folder for '
+                              'DicomFilesClustering')
+                raise
+
+    if dicom_groups is None or not dicom_groups:
+        raise ValueError('Expected a boyle.dicom.sets.DicomFileSet.')
+
+    create_folder(folder_path)
+
+    for dcmg in dicom_groups:
+        if groupby_field_name is not None and len(groupby_field_name) > 0:
+            dir_name = DicomFile(dcmg).get_attributes(groupby_field_name)
+            dir_name = str(dir_name)
+        else:
+            dir_name = os.path.basename(dcmg)
+
+        group_folder = os.path.join(folder_path, dir_name)
+        create_folder(group_folder)
+
+        import shutil
+        dcm_files = dicom_groups[dcmg]
+        try:
+            for srcf in dcm_files:
+                destf = os.path.join(group_folder, os.path.basename(srcf))
+                while os.path.exists(destf):
+                    destf += '+'
+                shutil.copyfile(srcf, destf)
+        except Exception:
+            msg = 'Error copying file {} to {}'.format(srcf, group_folder)
+            print(msg)
+            log.exception(msg)
+            raise
+
+
 class DicomFilesClustering(object):
     """A self-organizing set of DICOM files.
     It uses DicomDistanceMeasure to compare
     all DICOM files within a set of folders and create clusters of DICOM files
     that are similar.
-
     This has been created to automatically generate sets of files for different
     subjects.
 
+    By default it uses the Levenshtein meaure to calculate the distances.
     Set the fields/weights in DICOM_FIELD_WEIGHTS to adjust this.
-    """
 
-    def __init__(self, folders=None, header_fields=None):
-        """
-
-        Parameters
-        ----------
-        folders: str or list of str
+    Parameters
+    ----------
+    folders: str or list of str
         Paths to folders containing DICOM files.
         If None, won't look for files anywhere.
 
-        header_fields: dict or list of str to float
+    header_fields: dict or list of str to float
         Can be either a list of header field names that will be used for
         the SimpleDicomDistance and check str total similarity.
         Can also be a dict with header field names to float scalar values, that
         indicate a distance measure ratio for the levenshtein distance
         averaging of all the header field names in it. e.g., {'PatientID': 1}
-        """
+
+    Notes
+    -----
+    The initialization of this class will take some time as it will list all
+    the DICOM files in the given folders.
+    """
+
+    def __init__(self, folders=None, header_fields=None):
         self._file_dists = None
         self._subjs = DefaultOrderedDict(list)
 
@@ -284,8 +338,7 @@ class DicomFilesClustering(object):
         self.dicom_groups = group_dicom_files(self._dicoms.items, self.headers)
 
     @staticmethod
-    def calculate_file_distances(dicom_files, field_weights=None,
-                                 dist_method=None):
+    def calculate_file_distances(dicom_files, field_weights=None, dist_method=None):
         """
         Calculates the DicomFileDistance between all files in dicom_files,
         using an weighted Levenshtein measure between all field names in
@@ -387,8 +440,7 @@ class DicomFilesClustering(object):
         """
         triu_idx = np.triu_indices(dist_matrix.shape[0], k=k)
         upper = np.zeros_like(dist_matrix)
-        upper[triu_idx] = dist_matrix[triu_idx] < \
-                          np.percentile(dist_matrix[triu_idx], perc_thr)
+        upper[triu_idx] = dist_matrix[triu_idx] < np.percentile(dist_matrix[triu_idx], perc_thr)
         return upper
 
     def get_groups_in_same_folder(self, folder_depth=3):
@@ -462,8 +514,6 @@ class DicomFilesClustering(object):
              The indices can be constructed with Numpy e.g.,
              indices = np.where(square_matrix)
         """
-        from ..more_collections import merge_dict_of_lists
-
         try:
             merged = merge_dict_of_lists(self.dicom_groups, indices,
                                          pop_later=True, copy=True)
@@ -485,40 +535,11 @@ class DicomFilesClustering(object):
          DICOM field name. Will get the value of this field to name the group
          folder. If empty or None will use the basename of the group key file.
         """
-        def create_folder(path):
-            if not os.path.exists(path):
-                try:
-                    os.mkdir(path)
-                except Exception:
-                    log.exception('Error creating folder for '
-                                  'DicomFilesClustering')
-                    raise
-
-        create_folder(folder_path)
-
-        for dcmg in self.dicom_groups:
-            if groupby_field_name is not None and len(groupby_field_name) > 0:
-                dir_name = DicomFile(dcmg).get_attributes(groupby_field_name)
-                dir_name = str(dir_name)
-            else:
-                dir_name = os.path.basename(dcmg)
-
-            group_folder = os.path.join(folder_path, dir_name)
-            create_folder(group_folder)
-
-            import shutil
-            dcm_files = self.dicom_groups[dcmg]
-            try:
-                for srcf in dcm_files:
-                    destf = os.path.join(group_folder, os.path.basename(srcf))
-                    while os.path.exists(destf):
-                        destf += '+'
-                    shutil.copyfile(srcf, destf)
-            except Exception:
-                msg = 'Error copying file {} to {}'.format(srcf, group_folder)
-                print(msg)
-                log.exception(msg)
-                raise
+        try:
+            copy_groups_to_folder(self.dicom_groups, folder_path, groupby_field_name)
+        except:
+            log.exception('Error moving dicom groups to {}.'.format(folder_path))
+            raise
 
     def get_unique_field_values_per_group(self, field_name,
                                           field_to_use_as_key=None):
@@ -649,6 +670,3 @@ if __name__ == '__main__':
 
         #'PatientID'/'ProtocolName'
         #join experiment
-
-
-

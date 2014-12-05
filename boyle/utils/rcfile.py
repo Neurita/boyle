@@ -50,7 +50,7 @@ def get_config(appname, config_file):
 
     config = configparser.ConfigParser(interpolation=ExtendedInterpolation())
     read = config.read(files)
-    log.debug('files read: %s' % read) 
+    log.debug('files read: {}'.format(read))
 
     cfg_items = {}
     if config.has_section(appname):
@@ -67,13 +67,13 @@ def get_config(appname, config_file):
 
 def rcfile(appname, args={}, strip_dashes=True):
     """
-        Read environment variables and config files and return them merged with 
+        Read environment variables and config files and return them merged with
         predefined list of arguments.
 
         Parameters
         ----------
         appname: str
-            Application name, used for config files and environemnt variable 
+            Application name, used for config files and environemnt variable
             names.
 
         args
@@ -84,24 +84,24 @@ def rcfile(appname, args={}, strip_dashes=True):
 
         Returns
         --------
-        dict 
-            containing the merged variables of environment variables, config 
+        dict
+            containing the merged variables of environment variables, config
             files and args.
 
         Notes
         -----
-        Environment variables are read if they start with appname in uppercase 
+        Environment variables are read if they start with appname in uppercase
         with underscore, for example:
 
             TEST_VAR=1
 
-        Config files compatible with ConfigParser are read and the section name 
+        Config files compatible with ConfigParser are read and the section name
         appname is read, example:
 
             [appname]
             var=1
 
-        We can also have host-dependent configuration values, which have 
+        We can also have host-dependent configuration values, which have
         priority over the default appname values.
 
             [appname]
@@ -111,9 +111,9 @@ def rcfile(appname, args={}, strip_dashes=True):
             var=3
 
 
-        Files are read from: /etc/appname/config, 
-                             /etc/appfilerc, 
-                             ~/.config/appname/config, 
+        Files are read from: /etc/appname/config,
+                             /etc/appfilerc,
+                             ~/.config/appname/config,
                              ~/.config/appname,
                              ~/.appname/config,
                              ~/.appnamerc,
@@ -207,4 +207,3 @@ def rcfile(appname, args={}, strip_dashes=True):
 #                    option, section,
 #                    "'$' must be followed by '$' or '{', "
 #                    "found: %r" % (rest,))
-

@@ -112,7 +112,6 @@ def get_sampling_interval(func_img):
     return func_img.get_header().get_zooms()[-1]
 
 
-
 def create_mask_file(filepath, outpath, threshold=0):
     """
 
@@ -131,13 +130,9 @@ def create_mask_file(filepath, outpath, threshold=0):
         nibf = nib.load(filepath)
         vol = nibf.get_data() > threshold
 
-        #vol, filepath, affine=None, header=None
+        # vol, filepath, affine=None, header=None
         save_niigz(outpath, vol, nibf.get_affine(), nibf.get_header())
 
     except Exception as exc:
         log.exception('Error creating mask from file {0}.'.format(filepath))
-
-
-
-
-
+        raise

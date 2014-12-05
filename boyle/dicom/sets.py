@@ -26,8 +26,8 @@ class DicomFileSet(ItemSet):
         if folders is not None:
             try:
                 self._store_dicom_paths(folders)
-            except FolderNotFound as fe:
-                log.error('Error storing dicom file paths. {}'.format(fe.msg))
+            except FolderNotFound:
+                log.exception('Error storing dicom file paths.')
                 raise
 
     def _store_dicom_paths(self, folders):
@@ -338,4 +338,3 @@ if __name__ == '__main__':
 
     dicoms = DicomsGenericSet(datadir, store_metadata=True,
                               header_fields=header_fields)
-
