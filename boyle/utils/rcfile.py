@@ -34,7 +34,7 @@ def get_environment(appname):
     return dict([(k.replace(prefix, '').lower(), v) for k, v in vars])
 
 
-def get_config(appname, config_file):
+def get_config(appname, config_file, additional_search_path):
     home = expanduser('~')
     files = [
         join('/etc', appname, 'config'),
@@ -45,7 +45,8 @@ def get_config(appname, config_file):
         join(home, '.%src' % appname),
         '%src' % appname,
         '.%src' % appname,
-        config_file or ''
+        config_file or '',
+        join(additional_search_path, '%src' % appname) or '',
     ]
 
     config = configparser.ConfigParser(interpolation=ExtendedInterpolation())
@@ -119,7 +120,8 @@ def rcfile(appname, args={}, strip_dashes=True):
                              ~/.appnamerc,
                              appnamerc,
                              .appnamerc,
-                             file provided by config variable in args.
+                             appnamerc file found in 'path' folder variable in args,
+                             file provided by 'config' variable in args.
 
         Example
         -------
@@ -131,7 +133,7 @@ def rcfile(appname, args={}, strip_dashes=True):
 
     environ = get_environment(appname)
 
-    config = get_config(appname, args.get('config', ''))
+    config = get_config(appname, args.get('config', ''), args.get('path', ''))
 
     return merge(merge(args, config), environ)
 
