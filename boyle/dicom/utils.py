@@ -78,6 +78,12 @@ class DicomFile(FileDataset):
 
         return tuple(attrs)
 
+    def __getitem__(self, item):
+        if hasattr(self, item):
+            return getattr(self, item, '')
+        else:
+            raise KeyError('Could not find the field {}.'.format(item))
+
 
 def get_dicom_files(dirpath):
     return [DicomFile(os.path.join(dp, f))
