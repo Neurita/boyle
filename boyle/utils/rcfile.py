@@ -46,7 +46,8 @@ def get_config(appname, config_file, additional_search_path):
         '%src' % appname,
         '.%src' % appname,
         config_file or '',
-        join(additional_search_path, '%src' % appname) or '',
+        join(additional_search_path,  '%src' % appname) or '',
+        join(additional_search_path, '.%src' % appname) or '',
     ]
 
     config = configparser.ConfigParser(interpolation=ExtendedInterpolation())
@@ -121,6 +122,7 @@ def rcfile(appname, args={}, strip_dashes=True):
                              appnamerc,
                              .appnamerc,
                              appnamerc file found in 'path' folder variable in args,
+                             .appnamerc file found in 'path' folder variable in args,
                              file provided by 'config' variable in args.
 
         Example
