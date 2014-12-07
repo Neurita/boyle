@@ -242,7 +242,7 @@ def group_dicom_files(dicom_file_paths, header_fields):
 
         dist.set_dicom_file1(file_path1)
         j = len(path_list)-1
-        while j > 0:
+        while j >= 0:
             file_path2 = path_list[j]
             dist.set_dicom_file2(file_path2)
 
