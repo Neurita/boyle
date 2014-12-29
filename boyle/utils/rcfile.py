@@ -34,7 +34,7 @@ def get_environment(appname):
     return dict([(k.replace(prefix, '').lower(), v) for k, v in vars])
 
 
-def get_config(appname, section, config_file, additional_search_path):
+def get_config_filepaths(appname, config_file=None, additional_search_path=None):
     home = expanduser('~')
     files = [
         join('/etc', appname, 'config'),
@@ -46,12 +46,20 @@ def get_config(appname, section, config_file, additional_search_path):
         '%src' % appname,
         '.%src' % appname,
         config_file or '',
-        join(additional_search_path,  '%src' % appname) or '',
-        join(additional_search_path, '.%src' % appname) or '',
     ]
 
+    if additional_search_path is not None:
+        files.extend([join(additional_search_path,  '%src' % appname),
+                      join(additional_search_path, '.%src' % appname),
+                      ])
+
+    return files
+
+
+def get_config(appname, section, config_file, additional_search_path):
     config = configparser.ConfigParser(interpolation=ExtendedInterpolation())
-    read = config.read(files)
+    files  = get_config_filepaths(appname, config_file, additional_search_path)
+    read   = config.read(files)
     log.debug('files read: {}'.format(read))
 
     cfg_items = {}
@@ -68,69 +76,68 @@ def get_config(appname, section, config_file, additional_search_path):
 
 
 def rcfile(appname, section=None, args={}, strip_dashes=True):
-    """
-        Read environment variables and config files and return them merged with
-        predefined list of arguments.
+    """Read environment variables and config files and return them merged with
+    predefined list of arguments.
 
-        Parameters
-        ----------
-        appname: str
-            Application name, used for config files and environment variable
-            names.
+    Parameters
+    ----------
+    appname: str
+        Application name, used for config files and environment variable
+        names.
 
-        section: str
-            Name of the section to be read. If this is not set: appname.
+    section: str
+        Name of the section to be read. If this is not set: appname.
 
-        args
-            arguments from command line (optparse, docopt, etc).
+    args:
+        arguments from command line (optparse, docopt, etc).
 
-        strip_dashes: bool
-            Strip dashes prefixing key names from args dict.
+    strip_dashes: bool
+        Strip dashes prefixing key names from args dict.
 
-        Returns
-        --------
-        dict
-            containing the merged variables of environment variables, config
-            files and args.
+    Returns
+    --------
+    dict
+        containing the merged variables of environment variables, config
+        files and args.
 
-        Notes
-        -----
-        Environment variables are read if they start with appname in uppercase
-        with underscore, for example:
+    Notes
+    -----
+    Environment variables are read if they start with appname in uppercase
+    with underscore, for example:
 
-            TEST_VAR=1
+        TEST_VAR=1
 
-        Config files compatible with ConfigParser are read and the section name
-        appname is read, example:
+    Config files compatible with ConfigParser are read and the section name
+    appname is read, example:
 
-            [appname]
-            var=1
+        [appname]
+        var=1
 
-        We can also have host-dependent configuration values, which have
-        priority over the default appname values.
+    We can also have host-dependent configuration values, which have
+    priority over the default appname values.
 
-            [appname]
-            var=1
+        [appname]
+        var=1
 
-            [appname:mylinux]
-            var=3
+        [appname:mylinux]
+        var=3
 
 
-        Files are read from: /etc/appname/config,
-                             /etc/appfilerc,
-                             ~/.config/appname/config,
-                             ~/.config/appname,
-                             ~/.appname/config,
-                             ~/.appnamerc,
-                             appnamerc,
-                             .appnamerc,
-                             appnamerc file found in 'path' folder variable in args,
-                             .appnamerc file found in 'path' folder variable in args,
-                             file provided by 'config' variable in args.
+    Files are read from: /etc/appname/config,
+                         /etc/appfilerc,
+                         ~/.config/appname/config,
+                         ~/.config/appname,
+                         ~/.appname/config,
+                         ~/.appnamerc,
+                         appnamerc,
+                         .appnamerc,
+                         appnamerc file found in 'path' folder variable in args,
+                         .appnamerc file found in 'path' folder variable in args,
+                         file provided by 'config' variable in args.
 
-        Example
-        -------
-            args = rcfile(__name__, docopt(__doc__, version=__version__))
+    Example
+    -------
+        args = rcfile(__name__, docopt(__doc__, version=__version__))
     """
     if strip_dashes:
         for k in args.keys():

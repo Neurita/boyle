@@ -166,7 +166,7 @@ def recursive_find_search(folder_path, regex=None):
 
 def iter_recursive_find(folder_path, *regex):
     '''
-    Returns absolute paths of files that match the regexs within file_dir and
+    Returns absolute paths of files that match the regexs within folder_path and
     all its children folders.
 
     This is an iterator function that will use yield to return each set of
