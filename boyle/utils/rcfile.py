@@ -34,7 +34,7 @@ def get_environment(appname):
     return dict([(k.replace(prefix, '').lower(), v) for k, v in vars])
 
 
-def get_config(appname, config_file, additional_search_path):
+def get_config(appname, section, config_file, additional_search_path):
     home = expanduser('~')
     files = [
         join('/etc', appname, 'config'),
@@ -55,11 +55,11 @@ def get_config(appname, config_file, additional_search_path):
     log.debug('files read: {}'.format(read))
 
     cfg_items = {}
-    if config.has_section(appname):
-        cfg_items = dict(config.items(appname))
+    if config.has_section(section):
+        cfg_items = dict(config.items(section))
 
     hn = socket.gethostname()
-    host_section = '{}:{}'.format(appname, hn)
+    host_section = '{}:{}'.format(section, hn)
     if config.has_section(host_section):
         host_items = dict(config.items(host_section))
         cfg_items = merge(host_items, cfg_items)
@@ -67,7 +67,7 @@ def get_config(appname, config_file, additional_search_path):
     return cfg_items
 
 
-def rcfile(appname, args={}, strip_dashes=True):
+def rcfile(appname, section=None, args={}, strip_dashes=True):
     """
         Read environment variables and config files and return them merged with
         predefined list of arguments.
@@ -75,8 +75,11 @@ def rcfile(appname, args={}, strip_dashes=True):
         Parameters
         ----------
         appname: str
-            Application name, used for config files and environemnt variable
+            Application name, used for config files and environment variable
             names.
+
+        section: str
+            Name of the section to be read. If this is not set: appname.
 
         args
             arguments from command line (optparse, docopt, etc).
@@ -135,7 +138,10 @@ def rcfile(appname, args={}, strip_dashes=True):
 
     environ = get_environment(appname)
 
-    config = get_config(appname, args.get('config', ''), args.get('path', ''))
+    if section is None:
+        section = appname
+
+    config = get_config(appname, section, args.get('config', ''), args.get('path', ''))
 
     return merge(merge(args, config), environ)
 
