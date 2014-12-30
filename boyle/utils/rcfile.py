@@ -56,7 +56,7 @@ def get_config_filepaths(appname, config_file=None, additional_search_path=None)
     return files
 
 
-def get_config(appname, section, config_file, additional_search_path):
+def get_config(appname, section, config_file=None, additional_search_path=None):
     config = configparser.ConfigParser(interpolation=ExtendedInterpolation())
     files  = get_config_filepaths(appname, config_file, additional_search_path)
     read   = config.read(files)
@@ -69,10 +69,19 @@ def get_config(appname, section, config_file, additional_search_path):
     hn = socket.gethostname()
     host_section = '{}:{}'.format(section, hn)
     if config.has_section(host_section):
-        host_items = dict(config.items(host_section))
-        cfg_items = merge(host_items, cfg_items)
+        host_items = dict (config.items(host_section))
+        cfg_items  = merge(host_items, cfg_items)
 
     return cfg_items
+
+
+def get_sections(appname, config_file=None, additional_search_path=None):
+    config = configparser.ConfigParser(interpolation=ExtendedInterpolation())
+    files  = get_config_filepaths(appname, config_file, additional_search_path)
+    read   = config.read(files)
+    log.debug('files read: {}'.format(read))
+
+    return config.sections()
 
 
 def rcfile(appname, section=None, args={}, strip_dashes=True):
