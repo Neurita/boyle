@@ -11,8 +11,10 @@
 
 import re
 import os
+import shutil
+import os.path as op
 from glob import glob
-from ..strings import search_list, filter_list
+from ..utils.strings import search_list, filter_list
 
 
 def dir_search(regex, wd=None):
@@ -72,7 +74,7 @@ def get_file_list(file_dir, regex=None):
     if regex is not None:
         file_list = search_list(file_list, regex)
 
-    file_list = [os.path.join(file_dir, fname) for fname in file_list]
+    file_list = [op.join(file_dir, fname) for fname in file_list]
 
     return file_list
 
@@ -126,7 +128,7 @@ def recursive_find_match(folder_path, regex=None):
 
     outlist = []
     for root, dirs, files in os.walk(folder_path):
-        outlist.extend([os.path.join(root, f) for f in files
+        outlist.extend([op.join(root, f) for f in files
                         if re.match(regex, f)])
 
     return outlist
@@ -156,7 +158,7 @@ def recursive_find_search(folder_path, regex=None):
 
     outlist = []
     for root, dirs, files in os.walk(folder_path):
-        outlist.extend([os.path.join(root, f) for f in files
+        outlist.extend([op.join(root, f) for f in files
                         if re.search(regex, f)])
 
     return outlist
@@ -164,7 +166,7 @@ def recursive_find_search(folder_path, regex=None):
 
 def iter_recursive_find(folder_path, *regex):
     '''
-    Returns absolute paths of files that match the regexs within file_dir and
+    Returns absolute paths of files that match the regexs within folder_path and
     all its children folders.
 
     This is an iterator function that will use yield to return each set of
@@ -192,7 +194,7 @@ def iter_recursive_find(folder_path, *regex):
             for f in files:
                 for reg in regex:
                     if re.search(reg, f):
-                         outlist.append(os.path.join(root, f))
+                         outlist.append(op.join(root, f))
             if len(outlist) == len(regex):
                 yield outlist
 
@@ -213,7 +215,7 @@ def get_all_files(folder):
     """
     for path, dirlist, filelist in os.walk(folder):
         for fn in filelist:
-            yield os.path.join(path, fn)
+            yield op.join(path, fn)
 
 
 def find_match(base_directory, regex=None):
@@ -231,7 +233,7 @@ def find_match(base_directory, regex=None):
     if regex is None:
         regex = ''
 
-    return glob(os.path.join(base_directory, regex))
+    return glob(op.join(base_directory, regex))
 
 
 def recursive_glob(base_directory, regex=None):
@@ -253,7 +255,7 @@ def recursive_glob(base_directory, regex=None):
     if regex is None:
         regex = ''
 
-    files = glob(os.path.join(base_directory, regex))
+    files = glob(op.join(base_directory, regex))
     for path, dirlist, filelist in os.walk(base_directory):
         for dir_name in dirlist:
             files.extend(glob(op.join(path, dir_name, regex)))
@@ -261,9 +263,9 @@ def recursive_glob(base_directory, regex=None):
     return files
 
 
-def recursive_remove(work_dir=CWD, regex='*'):
+def recursive_remove(work_dir, regex='*'):
     [os.remove(fn) for fn in recursive_glob(work_dir, regex)]
 
 
-def recursive_rmtrees(work_dir=CWD, regex='*'):
+def recursive_rmtrees(work_dir, regex='*'):
     [shutil.rmtree(fn, ignore_errors=True) for fn in recursive_glob(work_dir, regex)]

@@ -7,12 +7,12 @@ import numpy as np
 from ..more_collections import DefaultOrderedDict, merge_dict_of_lists
 from ..files.names import get_folder_subpath
 from ..config import DICOM_FIELD_WEIGHTS
+from ..utils.validation import check_X_y
 
 from .utils import DicomFile
 from .sets import DicomFileSet
 
 log = logging.getLogger(__name__)
-
 
 
 class DistanceMeasure(object):
@@ -64,46 +64,59 @@ class DistanceMeasure(object):
         pass
 
 
-class DicomFileDistance(DistanceMeasure):
-
-    import Levenshtein
-
-    similarity_measure = Levenshtein.ratio
-
+class SimpleDicomFileDistance(object):
+    """This class measures a 'distance' between DICOM field values of two files.
+    The fields are can be chosen and also have a weight.
+    """
     def __init__(self, field_weights=DICOM_FIELD_WEIGHTS):
         self.dcmf1 = None
         self.dcmf2 = None
+
+        if isinstance(field_weights, str):
+            field_weights = {field_weights: 1}
+        elif isinstance(field_weights, list) or isinstance(field_weights, set):
+            field_weights = {fn: 1 for fn in field_weights}
+
         self.field_weights = field_weights
-        self.inv_sum_weights = 1/sum(tuple(field_weights.values()))
 
     def fit(self, dcm_file1, dcm_file2):
         """
+        Parameters
+        ----------
+        dcm_file1: str (path to file) or DicomFile or namedtuple
 
-        :param dcm_file1: str (path to file) or DicomFile or namedtuple
-
-        :param dcm_file2: str (path to file) or DicomFile or namedtuple
+        dcm_file2: str (path to file) or DicomFile or namedtuple
         """
         self.set_dicom_file1(dcm_file1)
         self.set_dicom_file2(dcm_file2)
 
     def set_dicom_file1(self, dcm_file):
         """
-        :param dcm_file: str (path to file) or DicomFile or namedtuple
+        Parameters
+        ----------
+        dcm_file: str (path to file) or DicomFile or namedtuple
         """
         self.dcmf1 = self._read_dcmfile(dcm_file)
 
     def set_dicom_file2(self, dcm_file):
         """
-        :param dcm_file: str (path to file) or DicomFile or namedtuple
+        Parameters
+        ----------
+        dcm_file: str (path to file) or DicomFile or namedtuple
         """
         self.dcmf2 = self._read_dcmfile(dcm_file)
 
     @staticmethod
     def _read_dcmfile(dcm_file):
         """
+        Parameters
+        ----------
+        dcm_file: str or DicomFile
+            File path or DicomFile
 
-        :param dcm_file:
-        :return:
+        Returns
+        -------
+        DicomFile
         """
         if isinstance(dcm_file, str):
             return DicomFile(dcm_file)
@@ -113,6 +126,36 @@ class DicomFileDistance(DistanceMeasure):
     def fit_transform(self, file_path1, file_path2):
         self.fit(file_path1, file_path2)
         return self.transform()
+
+    def transform(self):
+        """Check the field values in self.dcmf1 and self.dcmf2 and returns True
+        if all the field values are the same, False otherwise.
+
+        Returns
+        -------
+        bool
+        """
+        if self.dcmf1 is None or self.dcmf2 is None:
+            return np.inf
+
+        for field_name in self.field_weights:
+            if (str(getattr(self.dcmf1, field_name, ''))
+                    != str(getattr(self.dcmf2, field_name, ''))):
+                return False
+
+        return True
+
+
+class LevenshteinDicomFileDistance(SimpleDicomFileDistance):
+    """This class is a DICOM file analyzer which used Levenshtein distance
+    measure between DICOM fields.
+
+    Notes
+    -----
+    See SimpleDicomFileDistance
+    """
+    import Levenshtein
+    similarity_measure = Levenshtein.ratio
 
     def transform(self):
 
@@ -125,7 +168,7 @@ class DicomFileDistance(DistanceMeasure):
         field_weights = self.field_weights.copy()
 
         dist = 0
-        for field_name in list(field_weights.keys()):
+        for field_name in field_weights:
 
             str1, str2 = '', ''
             try:
@@ -152,10 +195,7 @@ class DicomFileDistance(DistanceMeasure):
                 return 1
 
             try:
-                if str1 == str2:
-                   simil = 1
-                else:
-                   simil = self.similarity_measure(str1, str2)
+                simil = self.similarity_measure(str1, str2) if str1 != str2 else 1
 
                 if simil > 0:
                     weight = self.field_weights[field_name]
@@ -171,29 +211,6 @@ class DicomFileDistance(DistanceMeasure):
         return dist
 
 
-class SimpleDicomFileDistance(DicomFileDistance):
-
-    def __init__(self, field_weights=DICOM_FIELD_WEIGHTS):
-        super(SimpleDicomFileDistance, self).__init__(field_weights)
-
-    def transform(self):
-        """
-        Checks the field values in self.dcmf1 and self.dcmf2 and returns True
-        if all the field values are the same, False otherwise.
-
-        :return: bool
-        """
-        if self.dcmf1 is None or self.dcmf2 is None:
-            return np.inf
-
-        for field_name in self.field_weights:
-            if (str(getattr(self.dcmf1, field_name, ''))
-                    != str(getattr(self.dcmf2, field_name, ''))):
-                return False
-
-        return True
-
-
 def group_dicom_files(dicom_file_paths, header_fields):
     """
     Gets a list of DICOM file absolute paths and returns a list of lists of
@@ -203,16 +220,17 @@ def group_dicom_files(dicom_file_paths, header_fields):
     Parameters
     ----------
     dicom_file_paths: list of str
-    List or set of DICOM file paths
+        List or set of DICOM file paths
 
     header_fields: list of str
-    List of header field names to check on the comparisons of the DICOM files.
+        List of header field names to check on the comparisons of the DICOM files.
 
     Returns
     -------
     dict of DicomFileSets
+        The key is one filepath representing the group (the first found).
     """
-    dist = SimpleDicomFileDistance()
+    dist = SimpleDicomFileDistance(field_weights=header_fields)
 
     path_list = dicom_file_paths.copy()
 
@@ -224,7 +242,7 @@ def group_dicom_files(dicom_file_paths, header_fields):
 
         dist.set_dicom_file1(file_path1)
         j = len(path_list)-1
-        while j > 0:
+        while j >= 0:
             file_path2 = path_list[j]
             dist.set_dicom_file2(file_path2)
 
@@ -238,38 +256,165 @@ def group_dicom_files(dicom_file_paths, header_fields):
     return path_groups
 
 
+def copy_groups_to_folder(dicom_groups, folder_path, groupby_field_name):
+    """Copy the DICOM file groups to folder_path. Each group will be copied into
+    a subfolder with named given by groupby_field.
+
+    Parameters
+    ----------
+    dicom_groups: boyle.dicom.sets.DicomFileSet
+
+    folder_path: str
+     Path to where copy the DICOM files.
+
+    groupby_field_name: str
+     DICOM field name. Will get the value of this field to name the group
+     folder.
+    """
+    def create_folder(path):
+        if not os.path.exists(path):
+            try:
+                os.mkdir(path)
+            except Exception:
+                log.exception('Error creating folder for '
+                              'DicomFilesClustering')
+                raise
+
+    if dicom_groups is None or not dicom_groups:
+        raise ValueError('Expected a boyle.dicom.sets.DicomFileSet.')
+
+    create_folder(folder_path)
+
+    for dcmg in dicom_groups:
+        if groupby_field_name is not None and len(groupby_field_name) > 0:
+            dir_name = DicomFile(dcmg).get_attributes(groupby_field_name)
+            dir_name = str(dir_name)
+        else:
+            dir_name = os.path.basename(dcmg)
+
+        group_folder = os.path.join(folder_path, dir_name)
+        create_folder(group_folder)
+
+        log.debug('Copying files to {}.'.format(group_folder))
+
+        import shutil
+        dcm_files = dicom_groups[dcmg]
+        try:
+            for srcf in dcm_files:
+                destf = os.path.join(group_folder, os.path.basename(srcf))
+                while os.path.exists(destf):
+                    destf += '+'
+                shutil.copyfile(srcf, destf)
+        except Exception:
+            msg = 'Error copying file {} to {}'.format(srcf, group_folder)
+            print(msg)
+            log.exception(msg)
+            raise
+
+
+def calculate_file_distances(dicom_files, field_weights=None,
+                             dist_method_cls=None, **kwargs):
+    """
+    Calculates the DicomFileDistance between all files in dicom_files, using an
+    weighted Levenshtein measure between all field names in field_weights and
+    their corresponding weights.
+
+    Parameters
+    ----------
+    dicom_files: iterable of str
+        Dicom file paths
+
+    field_weights: dict of str to float
+        A dict with header field names to float scalar values, that
+        indicate a distance measure ratio for the levenshtein distance
+        averaging of all the header field names in it. e.g., {'PatientID': 1}
+
+    dist_method_cls: DicomFileDistance class
+        Distance method object to compare the files.
+        If None, the default DicomFileDistance method using Levenshtein
+        distance between the field_wieghts will be used.
+
+    kwargs: DicomFileDistance instantiation named arguments
+        Apart from the field_weitghts argument.
+
+    Returns
+    -------
+    file_dists: np.ndarray or scipy.sparse.lil_matrix of shape NxN
+        Levenshtein distances between each of the N items in dicom_files.
+    """
+    if dist_method_cls is None:
+        dist_method = LevenshteinDicomFileDistance(field_weights)
+    else:
+        try:
+            dist_method = dist_method_cls(field_weights=field_weights, **kwargs)
+        except:
+            log.exception('Could not instantiate {} object with field_weights '
+                          'and {}'.format(dist_method_cls, kwargs))
+
+    dist_dtype = np.float16
+    n_files = len(dicom_files)
+
+    try:
+        file_dists = np.zeros((n_files, n_files), dtype=dist_dtype)
+    except MemoryError as mee:
+        import scipy.sparse
+        file_dists = scipy.sparse.lil_matrix((n_files, n_files),
+                                             dtype=dist_dtype)
+
+    for idxi in range(n_files):
+        dist_method.set_dicom_file1(dicom_files[idxi])
+
+        for idxj in range(idxi+1, n_files):
+            dist_method.set_dicom_file2(dicom_files[idxj])
+
+            if idxi != idxj:
+                file_dists[idxi, idxj] = dist_method.transform()
+
+    return file_dists
+
+
 class DicomFilesClustering(object):
     """A self-organizing set of DICOM files.
-    It uses DicomDistanceMeasure to compare
-    all DICOM files within a set of folders and create clusters of DICOM files
-    that are similar.
-
+    It uses DicomDistanceMeasure to compare all DICOM files within a set of
+    folders and create clusters of DICOM files that are similar.
     This has been created to automatically generate sets of files for different
     subjects.
 
+    By default it uses the Levenshtein meaure to calculate the distances.
     Set the fields/weights in DICOM_FIELD_WEIGHTS to adjust this.
-    """
 
-    def __init__(self, folders=None, header_fields=None):
-        """
-
-        Parameters
-        ----------
-        folders: str or list of str
+    Parameters
+    ----------
+    folders: str or list of str
         Paths to folders containing DICOM files.
         If None, won't look for files anywhere.
 
-        header_fields: dict or list of str to float
+    header_fields: dict or list of str to float
         Can be either a list of header field names that will be used for
         the SimpleDicomDistance and check str total similarity.
         Can also be a dict with header field names to float scalar values, that
         indicate a distance measure ratio for the levenshtein distance
         averaging of all the header field names in it. e.g., {'PatientID': 1}
-        """
+
+    dist_method: class for DicomFileDistance
+        Right now, can be either: SimpleDicomFileDistance or LevenshteinDicomFileDistance
+        By default, it uses LevenshteinDicomFileDistance.
+
+    Notes
+    -----
+    The initialization of this class will take some time as it will list all
+    the DICOM files in the given folders and use SimpleDicomDistance to group up
+    all files which have the exact same header_fields values.
+    """
+
+    def __init__(self, folders=None, header_fields=None,
+                 dist_method_cls=LevenshteinDicomFileDistance):
         self._file_dists = None
         self._subjs = DefaultOrderedDict(list)
 
         self._dicoms = DicomFileSet(folders)
+        self._dist_method_cls = dist_method_cls
+
         self.field_weights = header_fields
 
         if isinstance(header_fields, list) or isinstance(header_fields, tuple):
@@ -283,59 +428,6 @@ class DicomFilesClustering(object):
 
         self.dicom_groups = group_dicom_files(self._dicoms.items, self.headers)
 
-    @staticmethod
-    def calculate_file_distances(dicom_files, field_weights=None,
-                                 dist_method=None):
-        """
-        Calculates the DicomFileDistance between all files in dicom_files,
-        using an weighted Levenshtein measure between all field names in
-        field_weights and their corresponding weights.
-
-        Parameters
-        ----------
-        dicom_files: iterable of str
-        Dicom file paths
-
-        field_weights: dict of str to float
-        A dict with header field names to float scalar values, that
-        indicate a distance measure ratio for the levenshtein distance
-        averaging of all the header field names in it. e.g., {'PatientID': 1}
-
-        dist_method: DicomFileDistance object
-        Distance method object to compare the files.
-        If None, the default DicomFileDistance method using Levenshtein
-        distance between the field_wieghts will be used.
-
-        Returns
-        -------
-        file_dists: np.ndarray or scipy.sparse.lil_matrix of shape NxN
-        Levenshtein distances between each of the N items in dicom_files.
-        """
-        if dist_method is None:
-            log.info('Calculating Levenshtein distances between {0} DICOM '
-                     'files.'.format(len(dicom_files)))
-            dist_method = DicomFileDistance(field_weights)
-
-        dist_dtype = np.float16
-        n_files = len(dicom_files)
-
-        try:
-            file_dists = np.zeros((n_files, n_files), dtype=dist_dtype)
-        except MemoryError as mee:
-            import scipy.sparse
-            file_dists = scipy.sparse.lil_matrix((n_files, n_files),
-                                                 dtype=dist_dtype)
-
-        for idxi in range(n_files):
-            dist_method.set_dicom_file1(dicom_files[idxi])
-
-            for idxj in range(idxi+1, n_files):
-                dist_method.set_dicom_file2(dicom_files[idxj])
-
-                if idxi != idxj:
-                    file_dists[idxi, idxj] = dist_method.transform()
-
-        return file_dists
 
     def levenshtein_analysis(self, field_weights=None):
         """
@@ -345,11 +437,10 @@ class DicomFilesClustering(object):
 
         Parameters
         ----------
-
         field_weights: dict of strings with floats
-        A dict with header field names to float scalar values, that
-        indicate a distance measure ratio for the levenshtein distance
-        averaging of all the header field names in it. e.g., {'PatientID': 1}
+            A dict with header field names to float scalar values, that indicate a distance measure
+            ratio for the levenshtein distance averaging of all the header field names in it.
+            e.g., {'PatientID': 1}
         """
         if field_weights is None:
             if not isinstance(self.field_weights, dict):
@@ -359,7 +450,7 @@ class DicomFilesClustering(object):
                 raise ValueError(msg)
 
         key_dicoms = list(self.dicom_groups.keys())
-        file_dists = self.calculate_file_distances(key_dicoms, field_weights)
+        file_dists = calculate_file_distances(key_dicoms, field_weights, self._dist_method_cls)
         return file_dists
 
     @staticmethod
@@ -387,8 +478,7 @@ class DicomFilesClustering(object):
         """
         triu_idx = np.triu_indices(dist_matrix.shape[0], k=k)
         upper = np.zeros_like(dist_matrix)
-        upper[triu_idx] = dist_matrix[triu_idx] < \
-                          np.percentile(dist_matrix[triu_idx], perc_thr)
+        upper[triu_idx] = dist_matrix[triu_idx] < np.percentile(dist_matrix[triu_idx], perc_thr)
         return upper
 
     def get_groups_in_same_folder(self, folder_depth=3):
@@ -462,8 +552,6 @@ class DicomFilesClustering(object):
              The indices can be constructed with Numpy e.g.,
              indices = np.where(square_matrix)
         """
-        from ..more_collections import merge_dict_of_lists
-
         try:
             merged = merge_dict_of_lists(self.dicom_groups, indices,
                                          pop_later=True, copy=True)
@@ -485,40 +573,11 @@ class DicomFilesClustering(object):
          DICOM field name. Will get the value of this field to name the group
          folder. If empty or None will use the basename of the group key file.
         """
-        def create_folder(path):
-            if not os.path.exists(path):
-                try:
-                    os.mkdir(path)
-                except Exception:
-                    log.exception('Error creating folder for '
-                                  'DicomFilesClustering')
-                    raise
-
-        create_folder(folder_path)
-
-        for dcmg in self.dicom_groups:
-            if groupby_field_name is not None and len(groupby_field_name) > 0:
-                dir_name = DicomFile(dcmg).get_attributes(groupby_field_name)
-                dir_name = str(dir_name)
-            else:
-                dir_name = os.path.basename(dcmg)
-
-            group_folder = os.path.join(folder_path, dir_name)
-            create_folder(group_folder)
-
-            import shutil
-            dcm_files = self.dicom_groups[dcmg]
-            try:
-                for srcf in dcm_files:
-                    destf = os.path.join(group_folder, os.path.basename(srcf))
-                    while os.path.exists(destf):
-                        destf += '+'
-                    shutil.copyfile(srcf, destf)
-            except Exception:
-                msg = 'Error copying file {} to {}'.format(srcf, group_folder)
-                print(msg)
-                log.exception(msg)
-                raise
+        try:
+            copy_groups_to_folder(self.dicom_groups, folder_path, groupby_field_name)
+        except:
+            log.exception('Error moving dicom groups to {}.'.format(folder_path))
+            raise
 
     def get_unique_field_values_per_group(self, field_name,
                                           field_to_use_as_key=None):
@@ -649,6 +708,3 @@ if __name__ == '__main__':
 
         #'PatientID'/'ProtocolName'
         #join experiment
-
-
-

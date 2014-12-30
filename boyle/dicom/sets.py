@@ -5,8 +5,7 @@ from collections import defaultdict, namedtuple
 
 from .utils import (find_all_dicom_files, is_dicom_file, DicomFile)
 
-from ..config import (DICOM_FILE_EXTENSIONS,
-                      OUTPUT_DICOM_EXTENSION)
+from ..config import (DICOM_FILE_EXTENSIONS, OUTPUT_DICOM_EXTENSION)
 from ..exceptions import FolderNotFound
 from ..files.names import get_abspath
 from ..more_collections import ItemSet
@@ -27,8 +26,8 @@ class DicomFileSet(ItemSet):
         if folders is not None:
             try:
                 self._store_dicom_paths(folders)
-            except FolderNotFound as fe:
-                log.error('Error storing dicom file paths. {}'.format(fe.msg))
+            except FolderNotFound:
+                log.exception('Error storing dicom file paths.')
                 raise
 
     def _store_dicom_paths(self, folders):
@@ -140,7 +139,7 @@ class DicomGenericSet(DicomFileSet):
         Path or paths to folders to be searched for Dicom files
 
         :param read_metadata: bool
-        If True, will either make a list of DicomFiles, or
+        If True, will make a list of DicomFiles, otherwise will store
         a simple DICOM header (namedtuples) with the fields specified
         in header_fields.
 
@@ -149,7 +148,7 @@ class DicomGenericSet(DicomFileSet):
         If store_metadata is False, this won't be used. Else and if this is
         None, will store the whole DicomFile.
         """
-        super(DicomGenericSet, self).__init__(self, folders)
+        DicomFileSet.__init__(self,  folders)
         self.read_dcm = self.get_dcm_reader(read_metadata, header_fields)
 
     @staticmethod
@@ -339,4 +338,3 @@ if __name__ == '__main__':
 
     dicoms = DicomsGenericSet(datadir, store_metadata=True,
                               header_fields=header_fields)
-

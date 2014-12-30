@@ -1,9 +1,11 @@
 import os
+import os.path as op
+
 import dicom
 import logging
 import subprocess
-from collections import defaultdict
-from dicom.dataset import FileDataset
+from   collections   import defaultdict
+from   dicom.dataset import FileDataset
 
 from ..files.search import get_all_files
 
@@ -47,7 +49,7 @@ class DicomFile(FileDataset):
             FileDataset.__init__(self, file_path, dcm, preamble, file_meta,
                                  is_implicit_VR, is_little_endian)
 
-            self.file_path = os.path.abspath(file_path)
+            self.file_path = op.abspath(file_path)
 
         except Exception as exc:
             log.exception('Error reading file {0}.'.format(file_path))

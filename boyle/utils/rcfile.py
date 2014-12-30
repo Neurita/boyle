@@ -34,7 +34,7 @@ def get_environment(appname):
     return dict([(k.replace(prefix, '').lower(), v) for k, v in vars])
 
 
-def get_config(appname, config_file):
+def get_config_filepaths(appname, config_file=None, additional_search_path=None):
     home = expanduser('~')
     files = [
         join('/etc', appname, 'config'),
@@ -45,85 +45,108 @@ def get_config(appname, config_file):
         join(home, '.%src' % appname),
         '%src' % appname,
         '.%src' % appname,
-        config_file or ''
+        config_file or '',
     ]
 
+    if additional_search_path is not None:
+        files.extend([join(additional_search_path,  '%src' % appname),
+                      join(additional_search_path, '.%src' % appname),
+                      ])
+
+    return files
+
+
+def get_config(appname, section, config_file=None, additional_search_path=None):
     config = configparser.ConfigParser(interpolation=ExtendedInterpolation())
-    read = config.read(files)
-    log.debug('files read: %s' % read) 
+    files  = get_config_filepaths(appname, config_file, additional_search_path)
+    read   = config.read(files)
+    log.debug('files read: {}'.format(read))
 
     cfg_items = {}
-    if config.has_section(appname):
-        cfg_items = dict(config.items(appname))
+    if config.has_section(section):
+        cfg_items = dict(config.items(section))
 
     hn = socket.gethostname()
-    host_section = '{}:{}'.format(appname, hn)
+    host_section = '{}:{}'.format(section, hn)
     if config.has_section(host_section):
-        host_items = dict(config.items(host_section))
-        cfg_items = merge(host_items, cfg_items)
+        host_items = dict (config.items(host_section))
+        cfg_items  = merge(host_items, cfg_items)
 
     return cfg_items
 
 
-def rcfile(appname, args={}, strip_dashes=True):
-    """
-        Read environment variables and config files and return them merged with 
-        predefined list of arguments.
+def get_sections(appname, config_file=None, additional_search_path=None):
+    config = configparser.ConfigParser(interpolation=ExtendedInterpolation())
+    files  = get_config_filepaths(appname, config_file, additional_search_path)
+    read   = config.read(files)
+    log.debug('files read: {}'.format(read))
 
-        Parameters
-        ----------
-        appname: str
-            Application name, used for config files and environemnt variable 
-            names.
-
-        args
-            arguments from command line (optparse, docopt, etc).
-
-        strip_dashes: bool
-            Strip dashes prefixing key names from args dict.
-
-        Returns
-        --------
-        dict 
-            containing the merged variables of environment variables, config 
-            files and args.
-
-        Notes
-        -----
-        Environment variables are read if they start with appname in uppercase 
-        with underscore, for example:
-
-            TEST_VAR=1
-
-        Config files compatible with ConfigParser are read and the section name 
-        appname is read, example:
-
-            [appname]
-            var=1
-
-        We can also have host-dependent configuration values, which have 
-        priority over the default appname values.
-
-            [appname]
-            var=1
-
-            [appname:mylinux]
-            var=3
+    return config.sections()
 
 
-        Files are read from: /etc/appname/config, 
-                             /etc/appfilerc, 
-                             ~/.config/appname/config, 
-                             ~/.config/appname,
-                             ~/.appname/config,
-                             ~/.appnamerc,
-                             appnamerc,
-                             .appnamerc,
-                             file provided by config variable in args.
+def rcfile(appname, section=None, args={}, strip_dashes=True):
+    """Read environment variables and config files and return them merged with
+    predefined list of arguments.
 
-        Example
-        -------
-            args = rcfile(__name__, docopt(__doc__, version=__version__))
+    Parameters
+    ----------
+    appname: str
+        Application name, used for config files and environment variable
+        names.
+
+    section: str
+        Name of the section to be read. If this is not set: appname.
+
+    args:
+        arguments from command line (optparse, docopt, etc).
+
+    strip_dashes: bool
+        Strip dashes prefixing key names from args dict.
+
+    Returns
+    --------
+    dict
+        containing the merged variables of environment variables, config
+        files and args.
+
+    Notes
+    -----
+    Environment variables are read if they start with appname in uppercase
+    with underscore, for example:
+
+        TEST_VAR=1
+
+    Config files compatible with ConfigParser are read and the section name
+    appname is read, example:
+
+        [appname]
+        var=1
+
+    We can also have host-dependent configuration values, which have
+    priority over the default appname values.
+
+        [appname]
+        var=1
+
+        [appname:mylinux]
+        var=3
+
+
+    Files are read from: /etc/appname/config,
+                         /etc/appfilerc,
+                         ~/.config/appname/config,
+                         ~/.config/appname,
+                         ~/.appname/config,
+                         ~/.appnamerc,
+                         appnamerc,
+                         .appnamerc,
+                         appnamerc file found in 'path' folder variable in args,
+                         .appnamerc file found in 'path' folder variable in args,
+                         file provided by 'config' variable in args.
+
+    Example
+    -------
+        args = rcfile(__name__, docopt(__doc__, version=__version__))
     """
     if strip_dashes:
         for k in args.keys():
@@ -131,7 +154,10 @@ def rcfile(appname, args={}, strip_dashes=True):
 
     environ = get_environment(appname)
 
-    config = get_config(appname, args.get('config', ''))
+    if section is None:
+        section = appname
+
+    config = get_config(appname, section, args.get('config', ''), args.get('path', ''))
 
     return merge(merge(args, config), environ)
 
@@ -207,4 +233,3 @@ def rcfile(appname, args={}, strip_dashes=True):
 #                    option, section,
 #                    "'$' must be followed by '$' or '{', "
 #                    "found: %r" % (rest,))
-

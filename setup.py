@@ -60,7 +60,7 @@ setup_dict = dict(
 
     extra_files=['CHANGES.rst', 'LICENSE', 'README.rst'],
 
-    scripts=[op.join(script_path, 'convert.py'),
+    scripts=[op.join(script_path, 'convert_sav.py'),
              op.join(script_path, 'filetree.py'),
              op.join(script_path, 'compare_id_sets.py')],
 
