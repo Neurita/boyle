@@ -11,9 +11,16 @@
 
 import os
 import os.path as op
+import logging
 import numpy as np
 import array
-from functools import reduce
+import shutil
+from   functools import reduce
+
+from   .files.names import get_extension, remove_ext
+
+
+log = logging.getLogger(__name__)
 
 
 # the order of these tags matter
@@ -66,7 +73,7 @@ NDARRAY_TO_ARRAY_TYPE = {np.float  : 'f',
 
 
 NUMPY_TO_MHD_TYPE = {v: k for k, v in MHD_TO_NUMPY_TYPE.items()}
-#ARRAY_TO_NDARRAY_TYPE = {v: k for k, v in NDARRAY_TO_ARRAY_TYPE.items()}
+# ARRAY_TO_NDARRAY_TYPE = {v: k for k, v in NDARRAY_TO_ARRAY_TYPE.items()}
 
 
 def read_meta_header(filename):
@@ -171,3 +178,72 @@ def write_mhd_file(mhdfile, data, shape):
         data_file = meta_dict['ElementDataFile']
 
     dump_raw_data(data_file, data)
+
+
+def copy_mhd_and_raw(src, dst):
+    """Copy .mhd and .raw files to dst.
+
+    If dst is a folder, won't change the file, but if dst is another filepath,
+    will modify the ElementDataFile field in the .mhd to point to the
+    new renamed .raw file.
+
+    Parameters
+    ----------
+    src: str
+        Path to the .mhd file to be copied
+
+    dst: str
+        Path to the destination of the .mhd and .raw files.
+        If a new file name is given, the extension will be ignored.
+    """
+    # check if src exists
+    if not op.exists(src):
+        msg = 'Could not find file {}.'.format(src)
+        log.error(msg)
+        raise IOError(msg)
+
+    # check its extension
+    ext = get_extension(src)
+    if ext != '.mhd':
+        msg = 'The src file path must be a .mhd file. Given: {}.'.format(src)
+        log.error(msg)
+        raise ValueError(msg)
+
+    # get the raw file for this src mhd file
+    meta_src = read_meta_header(src)
+
+    # get the source raw file
+    src_raw   = meta_src['ElementDataFile']
+    if not op.isabs(src_raw):
+        src_raw = op.join(op.dirname(src), src_raw)
+
+    # check if dst is dir
+    if op.isdir(dst):
+        # copy the mhd and raw file to its destiny
+        shutil.copyfile(src, dst)
+        shutil.copyfile(src_raw, dst)
+        return dst
+
+    # build raw file dst file name
+    dst_raw = op.join(op.dirname(dst), remove_ext(op.basename(dst))) + '.raw'
+
+    # add extension to the dst path
+    if get_extension(dst) != '.mhd':
+        dst += '.mhd'
+
+    # copy the mhd and raw file to its destiny
+    log.debug('cp: {} -> {}'.format(src,     dst))
+    log.debug('cp: {} -> {}'.format(src_raw, dst_raw))
+    shutil.copyfile(src, dst)
+    shutil.copyfile(src_raw, dst_raw)
+
+    # check if src file name is different than dst file name
+    # if not the same file name, change the content of the ElementDataFile field
+    if op.basename(dst) != op.basename(src):
+        log.debug('modify {}: ElementDataFile: {} -> {}'.format(dst, src_raw,
+                                                                op.basename(dst_raw)))
+        meta_dst = read_meta_header(dst)
+        meta_dst['ElementDataFile'] = op.basename(dst_raw)
+        write_meta_header(dst, meta_dst)
+
+    return dst
