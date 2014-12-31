@@ -121,3 +121,10 @@ def remove_from_string(string, values):
 
     return string
 
+
+def count_hits(strings, pattern):
+    count = 0
+    for s in strings:
+        if re.match(pattern, s):
+            count += 1
+    return count
