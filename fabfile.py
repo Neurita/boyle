@@ -75,10 +75,8 @@ def recursive_rmtrees(work_dir=CWD, regex='*'):
 
 
 @task
-def install_deps():
+def install_deps(req_filepaths = ['requirements.txt']):
     # for line in fileinput.input():
-    req_filepaths = ['requirements.txt']
-
     deps = get_requirements(*req_filepaths)
 
     try:
