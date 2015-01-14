@@ -20,7 +20,7 @@ def get_requirements(*args):
     install_deps = []
     try:
         for fpath in args:
-            install_deps.extend([str(d.req or d.url) for d in parse_requirements(fpath, session=uuid.uuid1())])
+            install_deps.extend([str(d.req) for d in parse_requirements(fpath, session=uuid.uuid1())])
     except:
         print('Error reading {} file looking for dependencies.'.format(fpath))
 
