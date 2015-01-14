@@ -5,7 +5,7 @@ Install the packages you have listed in the requirements file you input as
 first argument.
 """
 
-from __future__ import (absolute_import, division, print_function, 
+from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import sys
@@ -16,12 +16,11 @@ import uuid
 
 
 def get_requirements(*args):
-    """Parse all requirements files given and return a list of the 
-       dependencies"""
+    """Parse all requirements files given and return a list of the dependencies"""
     install_deps = []
     try:
         for fpath in args:
-            install_deps.extend([str(d.req) for d in parse_requirements(fpath, session=uuid.uuid1())])
+            install_deps.extend([str(d.req or d.url) for d in parse_requirements(fpath, session=uuid.uuid1())])
     except:
         print('Error reading {} file looking for dependencies.'.format(fpath))
 
