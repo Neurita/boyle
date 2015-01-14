@@ -12,6 +12,7 @@ import sys
 import fileinput
 import subprocess
 from pip.req import parse_requirements
+import uuid
 
 
 def get_requirements(*args):
@@ -20,7 +21,7 @@ def get_requirements(*args):
     install_deps = []
     try:
         for fpath in args:
-            install_deps.extend([str(d.req) for d in parse_requirements(fpath)])
+            install_deps.extend([str(d.req) for d in parse_requirements(fpath, session=uuid.uuid1())])
     except:
         print('Error reading {} file looking for dependencies.'.format(fpath))
 
