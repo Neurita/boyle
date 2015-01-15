@@ -38,7 +38,7 @@ exec(compile(open(version_pyfile).read(), version_pyfile, 'exec'))
 script_path = 'scripts'
 
 # install_reqs = parse_requirements('requirements.txt')
-req_files = ['requirements.txt', 'pip_requirements.txt']
+req_files = ['pip_requirements.txt', 'requirements.txt']
 
 LICENSE = 'new BSD'
 
@@ -55,6 +55,8 @@ setup_dict = dict(
     maintainer_email='alexsavio@gmail.com',
 
     packages=find_packages(),
+
+    setup_requires=['numpy'],
 
     install_requires=get_requirements(*req_files),
 
