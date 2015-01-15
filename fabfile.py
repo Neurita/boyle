@@ -6,7 +6,11 @@ first argument.
 """
 from   __future__ import (absolute_import, division, print_function, unicode_literals)
 
-from   fabric.api import task, local
+try:
+    from fabric.api import task, local
+except:
+    from invoke     import task
+    from invoke     import run as local
 
 import os
 import os.path    as     op
@@ -33,7 +37,7 @@ def get_requirements(*args):
     install_deps = []
     try:
         for fpath in args:
-            install_deps.extend([str(d.req) for d in parse_requirements(fpath)])
+            install_deps.extend([str(d.req or d.url) for d in parse_requirements(fpath)])
     except:
         print('Error reading {} file looking for dependencies.'.format(fpath))
 
