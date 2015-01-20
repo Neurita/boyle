@@ -78,7 +78,7 @@ NUMPY_TO_MHD_TYPE = {v: k for k, v in MHD_TO_NUMPY_TYPE.items()}
 
 def read_meta_header(filename):
     """Return a dictionary of meta data from meta header file"""
-    fileIN = open(filename, "r")
+    fileIN = open(filename, 'r')
     line = fileIN.readline()
 
     meta_dict = {}
@@ -175,7 +175,7 @@ def write_mhd_file(filename, data, shape, meta_dict={}):
     meta_dict['ObjectType']             = meta_dict.get('ObjectType',             'Image')
     meta_dict['BinaryData']             = meta_dict.get('BinaryData',             'True' )
     meta_dict['BinaryDataByteOrderMSB'] = meta_dict.get('BinaryDataByteOrderMSB', 'False')
-    meta_dict['ElementType']            = meta_dict.get('ElementType',            NUMPY_TO_MHD_TYPE[data.dtype])
+    meta_dict['ElementType']            = meta_dict.get('ElementType',            NUMPY_TO_MHD_TYPE[data.dtype.type])
     meta_dict['NDims']                  = meta_dict.get('NDims',                  str(len(shape)))
     meta_dict['DimSize']                = meta_dict.get('DimSize',                ' '.join([str(i) for i in shape]))
     meta_dict['ElementDataFile']        = meta_dict.get('ElementDataFile',        raw_filename)
