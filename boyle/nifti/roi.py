@@ -279,7 +279,7 @@ def get_3D_from_4D(nii_file, vol_idx=0):
         log.error(msg)
         raise ValueError(msg)
 
-    if not 0 < vol_idx < vol.shape[3]:
+    if not 0 <= vol_idx < vol.shape[3]:
         msg = 'IndexError: 4th dimension in volume {} has {} volumes, not {}.'.format(nii_file, vol.shape[3], vol_idx)
         log.error(msg)
         raise IndexError(msg)
