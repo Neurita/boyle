@@ -121,7 +121,7 @@ def load_raw_data_with_mhd(filename):
     data = np.array  (binvalues, ndtype)
     data = np.reshape(data, (arr[dim-1], volume))
 
-    if dim == 3:
+    if dim >= 3:
         # Begin 3D fix
         dimensions = [int(i) for i in meta_dict['DimSize'].split()]
         dimensions.reverse()
@@ -283,11 +283,11 @@ def get_3D_from_4D(filename, vol_idx=0):
     vol, hdr = load_raw_data_with_mhd(filename)
 
     if vol.ndim != 4:
-        msg = 'Volume in {} does not have 4 dimensions.'.format(filename)
+        msg = 'Volume in {} does not have 4 dimensions.'.format(op.join(op.dirname(filename), hdr['ElementDataFile']))
         log.error(msg)
         raise ValueError(msg)
 
-    if not 0 < vol_idx < vol.shape[3]:
+    if not 0 <= vol_idx < vol.shape[3]:
         msg = 'IndexError: 4th dimension in volume {} has {} volumes, not {}.'.format(filename, vol.shape[3], vol_idx)
         log.error(msg)
         raise IndexError(msg)
