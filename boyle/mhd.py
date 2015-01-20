@@ -159,19 +159,29 @@ def dump_raw_data(filename, data):
     rawfile.close()
 
 
-def write_mhd_file(mhdfile, data, shape):
-    assert(mhdfile[-4:] == '.mhd')
-    meta_dict = {}
-    meta_dict['ObjectType'] = 'Image'
-    meta_dict['BinaryData'] = 'True'
-    meta_dict['BinaryDataByteOrderMSB'] = 'False'
-    meta_dict['ElementType'] = NUMPY_TO_MHD_TYPE[data.dtype]
-    meta_dict['NDims'] = str(len(shape))
-    meta_dict['DimSize'] = ' '.join([str(i) for i in shape])
-    meta_dict['ElementDataFile'] = os.path.split(mhdfile)[1].replace('.mhd', '.raw')
-    write_meta_header(mhdfile, meta_dict)
+def write_mhd_file(filename, data, shape, meta_dict={}):
+    # check its extension
+    ext = get_extension(src)
+    if ext != '.mhd' or ext != '.raw':
+        mhd_filename = filename + '.mhd'
+        raw_filename = filename + '.raw'
+    elif ext == '.mhd':
+        mhd_filename = filename
+        raw_filename = remove_ext(filename) + '.raw'
+    elif ext == '.raw':
+        mhd_filename = remove_ext(filename) + '.mhd'
+        raw_filename = filename
 
-    pwd = os.path.split(mhdfile)[0]
+    meta_dict['ObjectType']             = meta_dict.get('ObjectType',             'Image')
+    meta_dict['BinaryData']             = meta_dict.get('BinaryData',             'True' )
+    meta_dict['BinaryDataByteOrderMSB'] = meta_dict.get('BinaryDataByteOrderMSB', 'False')
+    meta_dict['ElementType']            = meta_dict.get('ElementType',            NUMPY_TO_MHD_TYPE[data.dtype])
+    meta_dict['NDims']                  = meta_dict.get('NDims',                  str(len(shape)))
+    meta_dict['DimSize']                = meta_dict.get('DimSize',                ' '.join([str(i) for i in shape])
+    meta_dict['ElementDataFile']        = meta_dict.get('ElementDataFile',        raw_filename)
+    write_meta_header(mhd_filename, meta_dict)
+
+    pwd = os.path.split(filename)[0]
     if pwd:
         data_file = op.join(pwd, meta_dict['ElementDataFile'])
     else:
@@ -213,7 +223,7 @@ def copy_mhd_and_raw(src, dst):
     meta_src = read_meta_header(src)
 
     # get the source raw file
-    src_raw   = meta_src['ElementDataFile']
+    src_raw = meta_src['ElementDataFile']
     if not op.isabs(src_raw):
         src_raw = op.join(op.dirname(src), src_raw)
 
@@ -247,3 +257,45 @@ def copy_mhd_and_raw(src, dst):
         write_meta_header(dst, meta_dst)
 
     return dst
+
+
+
+def get_3D_from_4D(filename, vol_idx=0):
+    """Return a 3D volume from a 4D nifti image file
+
+    Parameters
+    ----------
+    filename: str
+        Path to the 4D .mhd file
+
+    vol_idx: int
+        Index of the 3D volume to be extracted from the 4D volume.
+
+    Returns
+    -------
+    vol, hdr
+        The data array and the new 3D image header.
+    """
+    def remove_4th_element_from_hdr_string(hdr, fieldname):
+        if fieldname in hdr:
+            hdr[fieldname] = ' '.join(hdr[fieldname].split()[:3])
+
+    vol, hdr = load_raw_data_with_mhd(nii_file)
+
+    if vol.ndim != 4:
+        msg = 'Volume in {} does not have 4 dimensions.'.format(nii_file)
+        log.error(msg)
+        raise ValueError(msg)
+
+    if not 0 < vol_idx < vol.shape[3]:
+        msg = 'IndexError: 4th dimension in volume {} has {} volumes, not {}.'.format(nii_file, vol.shape[3], vol_idx)
+        log.error(msg)
+        raise IndexError(msg)
+
+    new_vol = vol[:, :, :, vol_idx].copy()
+
+    hdr['NDims'] = 3
+    remove_4th_element_from_hdr_string(hdr, 'ElementSpacing')
+    remove_4th_element_from_hdr_string(hdr, 'DimSize')
+
+    return new_vol, hdr
