@@ -280,15 +280,15 @@ def get_3D_from_4D(filename, vol_idx=0):
         if fieldname in hdr:
             hdr[fieldname] = ' '.join(hdr[fieldname].split()[:3])
 
-    vol, hdr = load_raw_data_with_mhd(nii_file)
+    vol, hdr = load_raw_data_with_mhd(filename)
 
     if vol.ndim != 4:
-        msg = 'Volume in {} does not have 4 dimensions.'.format(nii_file)
+        msg = 'Volume in {} does not have 4 dimensions.'.format(filename)
         log.error(msg)
         raise ValueError(msg)
 
     if not 0 < vol_idx < vol.shape[3]:
-        msg = 'IndexError: 4th dimension in volume {} has {} volumes, not {}.'.format(nii_file, vol.shape[3], vol_idx)
+        msg = 'IndexError: 4th dimension in volume {} has {} volumes, not {}.'.format(filename, vol.shape[3], vol_idx)
         log.error(msg)
         raise IndexError(msg)
 
