@@ -177,7 +177,7 @@ def write_mhd_file(filename, data, shape, meta_dict={}):
     meta_dict['BinaryDataByteOrderMSB'] = meta_dict.get('BinaryDataByteOrderMSB', 'False')
     meta_dict['ElementType']            = meta_dict.get('ElementType',            NUMPY_TO_MHD_TYPE[data.dtype])
     meta_dict['NDims']                  = meta_dict.get('NDims',                  str(len(shape)))
-    meta_dict['DimSize']                = meta_dict.get('DimSize',                ' '.join([str(i) for i in shape])
+    meta_dict['DimSize']                = meta_dict.get('DimSize',                ' '.join([str(i) for i in shape]))
     meta_dict['ElementDataFile']        = meta_dict.get('ElementDataFile',        raw_filename)
     write_meta_header(mhd_filename, meta_dict)
 
