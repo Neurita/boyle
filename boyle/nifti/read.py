@@ -177,7 +177,7 @@ def niftilist_to_array(nii_filelist, outdtype=None):
         the same shape.
 
     smoothmm: int
-        Integer indicating the size of the FWHM Gaussian smoothing kernel you 
+        Integer indicating the size of the FWHM Gaussian smoothing kernel you
         would like for smoothing the volume before flattening it.
         Need FSL and nipype.
         See smooth_volume() source code.
@@ -197,7 +197,7 @@ def niftilist_to_array(nii_filelist, outdtype=None):
     try:
         vol = get_nii_data(nii_filelist[0])
     except IndexError as ie:
-        log.exception('nii_filelist should not be empty.')
+        log.exception('Error getting the first item of nii_filelist.')
 
     if not outdtype:
         outdtype = vol.dtype
@@ -221,7 +221,7 @@ def niftilist_mask_to_array(nii_filelist, mask_file=None, outdtype=None):
     Parameters
     ----------
     nii_filelist: list of str
-        List of absolute file paths to nifti files. All nifti files must have 
+        List of absolute file paths to nifti files. All nifti files must have
         the same shape.
 
     mask_file: str
@@ -234,15 +234,15 @@ def niftilist_mask_to_array(nii_filelist, mask_file=None, outdtype=None):
 
     Returns
     -------
-    outmat: 
-        Numpy array with shape N x mask_voxels containing the N files as flat 
+    outmat:
+        Numpy array with shape N x mask_voxels containing the N files as flat
         vectors with the data within the mask file.
 
-    mask_indices: 
-        Tuple with the 3D spatial indices of the masking voxels, for reshaping 
+    mask_indices:
+        Tuple with the 3D spatial indices of the masking voxels, for reshaping
         with vol_shape and remapping.
 
-    vol_shape: 
+    vol_shape:
         Tuple with shape of the volumes, for reshaping.
 
     """
