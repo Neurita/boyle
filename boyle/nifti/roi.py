@@ -18,7 +18,7 @@ from   scipy.ndimage.measurements   import center_of_mass
 from   collections                  import OrderedDict
 
 from   .read                        import get_nii_data, get_nii_info
-from   ..strings                    import search_list
+from   ..utils.strings              import search_list
 
 
 log = logging.getLogger(__name__)
