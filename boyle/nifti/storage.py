@@ -22,7 +22,7 @@ from nipy import save_image
 log = logging.getLogger(__name__)
 
 
-def save_niigz(file_path, vol, header=None, affine=None):
+def save_niigz(file_path, vol, affine=None, header=None):
     """Saves a volume into a Nifti (.nii.gz) file.
 
     Parameters
@@ -31,10 +31,10 @@ def save_niigz(file_path, vol, header=None, affine=None):
         Volume with the data to be saved.
     file_path: string
         Output file name path
-    header: nibabel.nifti1.Nifti1Header, optional
-        Header for the file, optional but recommended.
     affine: 4x4 Numpy array
         Array with the affine transform of the file.
+    header: nibabel.nifti1.Nifti1Header, optional
+        Header for the file, optional but recommended.
 
     Note
     ----
