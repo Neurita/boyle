@@ -161,7 +161,7 @@ def dump_raw_data(filename, data):
 
 def write_mhd_file(filename, data, shape, meta_dict={}):
     # check its extension
-    ext = get_extension(src)
+    ext = get_extension(filename)
     if ext != '.mhd' or ext != '.raw':
         mhd_filename = filename + '.mhd'
         raw_filename = filename + '.raw'
