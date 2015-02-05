@@ -14,6 +14,7 @@
 import os
 import sys
 import shutil
+import inspect
 import subprocess
 import logging
 
@@ -50,6 +51,20 @@ def which_py2(program):
 
     return None
 
+def whoami():
+    """Get the name of the current function"""
+    return inspect.stack()[1][3]
+
+
+def whosdaddy():
+    """Get the name of the current function"""
+    return inspect.stack()[2][3]
+
+
+def die(msg, code=-1):
+    """Writes msg to stderr and exits with return code"""
+    sys.stderr.write(msg + "\n")
+    sys.exit(code)
 
 def check_call(cmd_args):
     """
