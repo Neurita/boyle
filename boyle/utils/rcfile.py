@@ -3,17 +3,21 @@
 
 from __future__ import unicode_literals, print_function
 from os.path import join, expanduser
+
 import os
+import sys
 import socket
 import logging
 
-log = logging.getLogger(__name__)
-
-try:  # Python 2
-    import ConfigParser as confiparser
-except ImportError:  # Python 3
+# import the correct configparser
+try:
     import configparser
-from configparser import ExtendedInterpolation
+    from configparser import ExtendedInterpolation
+except ImportError:
+    log.exception("The Python2 builtin configparser won't work, please install the module: pip install configparser")
+
+
+log = logging.getLogger(__name__)
 
 
 def merge(dict_1, dict_2):
