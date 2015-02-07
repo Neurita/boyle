@@ -1,11 +1,14 @@
 
 import logging
-import numpy as np
-from nipy.algorithms.kernel_smooth import LinearFilter
+import numpy                         as np
+from   nipy.algorithms.kernel_smooth import LinearFilter
 
-from .read import load_nipy_img
-from ..files.names import get_abspath
-from ..more_collections import ItemSet
+from   .read              import load_nipy_img
+from   ..files.names      import get_abspath
+from   ..more_collections import ItemSet
+from   ..storage          import ExportData
+from   ..exceptions       import FileNotFound, NiftiFilesNotCompatible
+
 
 log = logging.getLogger(__name__)
 
@@ -45,24 +48,27 @@ class NiftiSubjectsSet(ItemSet):
         try:
             if isinstance(subj_files, list):
                 self.from_list(subj_files)
+
             elif isinstance(subj_files, dict):
                 self.from_dict(subj_files)
             else:
-                raise ValueError('Could not recognize subj_files argument '
-                                 'variable type.')
+                raise ValueError('Could not recognize subj_files argument variable type.')
         except Exception as exc:
             log.exception('Cannot read subj_files input argument')
 
     def _check_subj_shapes(self):
         """
         """
-        #TODO: check mask shape too
         shape = self.items[0].shape
+
+        mask_shape = self.get_mask_shape()
 
         for img in self.items:
             if img.shape != shape:
-                raise ValueError('Shape mismatch in '
-                                 'file {0}.'.format(img.file_path))
+                raise ValueError('Shape mismatch in file {0}.'.format(img.file_path))
+            if mask_shape is not None:
+                if img.shape != mask_shape:
+                    raise ValueError('Shape mismatch in file {0} with mask {1}.'.format(img.file_path, self.mask_file))
 
     @staticmethod
     def _load_image(file_path):
@@ -76,6 +82,9 @@ class NiftiSubjectsSet(ItemSet):
         -------
         nipy.Image with a file_path member
         """
+        if not os.path.exists(file_path):
+            raise FileNotFound(file_path)
+
         try:
             nii_img = load_nipy_img(file_path)
             nii_img.file_path = file_path
@@ -111,8 +120,7 @@ class NiftiSubjectsSet(ItemSet):
         for group_label in subj_files:
             try:
                 group_files = subj_files[group_label]
-                self.items.extend([self._load_image(get_abspath(imgf))
-                                   for imgf in group_files])
+                self.items.extend([self._load_image(get_abspath(imgf)) for imgf in group_files])
 
                 self.labels.extend([group_label]*len(group_files))
 
@@ -142,6 +150,11 @@ class NiftiSubjectsSet(ItemSet):
     def has_mask(self):
         return self.mask_file is not None
 
+    def get_mask_shape(self):
+        if not self.has_mask:
+            return None
+        return self._load_image(self.mask_file).shape
+
     def set_labels(self, subj_labels):
         """
         Parameters
@@ -157,8 +170,7 @@ class NiftiSubjectsSet(ItemSet):
         self.labels = subj_labels
 
     def to_matrix(self, smooth_mm=0, smooth_mask=False, outdtype=None):
-        """
-        Creates a Numpy array with the data.
+        """Create a Numpy array with the data and return the relevant information (mask indices and volume shape).
 
         Parameters
         ----------
@@ -205,22 +217,69 @@ class NiftiSubjectsSet(ItemSet):
             n_voxels = np.count_nonzero(mask)
 
         if n_voxels is None:
+            log.debug('Non-zero voxels have not been found in mask {}'.format(self.mask_file))
             n_voxels = np.prod(vol.shape)
 
         outmat = np.zeros((self.n_subjs, n_voxels), dtype=outdtype)
         try:
-            for i, vf in enumerate(self.items):
-                vol = self._smooth_img(vf, smooth_mm).get_data()
+            for i, nipy_img in enumerate(self.items):
+                vol = self._smooth_img(nipy_img, smooth_mm).get_data()
                 if mask_indices is not None:
                     outmat[i, :] = vol[mask_indices]
                 else:
                     outmat[i, :] = vol.flatten()
         except Exception as exc:
-            log.exception('Flattening file {0}'.format(vf.file_path))
+            log.exception('Flattening file {0}'.format(nipy_img.file_path))
+            raise
+        else:
+            return outmat, mask_indices, mask_shape
+
+    def to_file(self, output_file, smooth_mm=0, smooth_mask=False, outdtype=None):
+        """Save the Numpy array created from to_matrix function to the output_file.
+
+        Will save into the file: outmat, mask_indices, vol_shape
+
+            data: Numpy array with shape N x prod(vol.shape)
+                  containing the N files as flat vectors.
+
+            mask_indices: matrix with indices of the voxels in the mask
+
+            vol_shape: Tuple with shape of the volumes, for reshaping.
+
+        Parameters
+        ----------
+        output_file: str
+            Path to the output file. The extension of the file will be taken into account for the file format.
+            Choices of extensions: '.pyshelf' or '.shelf' (Python shelve)
+                                   '.mat' (Matlab archive),
+                                   '.hdf5' or '.h5' (HDF5 file)
+
+        smooth__mm: int
+            Integer indicating the size of the FWHM Gaussian smoothing kernel
+            to smooth the subject volumes before creating the data matrix
+
+        smooth_mask: bool
+            If True, will smooth the mask with the same kernel.
+
+        outdtype: dtype
+            Type of the elements of the array, if None will obtain the dtype from
+            the first nifti file.
+        """
+        try:
+            outmat, mask_indices, mask_shape = self.to_matrix(smooth_mm, smooth_mask, outdtype)
+        except:
+            log.exception('Error creating data matrix.')
             raise
 
-        return outmat, mask_indices, mask_shape
+        exporter = ExportData()
+        content = {'data':         outmat,
+                   'mask_indices': mask_indices,
+                   'mask_shape':   mask_shape,}
 
-if __name__ == '__main__':
-    #NiftiSubjectsSet(subj_files, mask_file=None, all_same_shape=True)
-    pass
+        log.debug('Creating content in file {}.'.format(output_file))
+
+        try:
+            exporter.save_variables(output_file, content)
+        except:
+            log.exception('Error saving variables to file {}.'.format(output_file))
+            raise
