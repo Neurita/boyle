@@ -34,8 +34,7 @@ def dir_search(regex, wd=None):
 
 
 def dir_match(regex, wd=None):
-    """
-    Creates a list of regex matches that result from the match_regex
+    """Create a list of regex matches that result from the match_regex
     of all file names within wd.
     The list of files will have wd as path prefix.
 
@@ -223,7 +222,7 @@ def iter_recursive_find(folder_path, *regex):
             for f in files:
                 for reg in regex:
                     if re.search(reg, f):
-                         outlist.append(op.join(root, f))
+                        outlist.append(op.join(root, f))
             if len(outlist) == len(regex):
                 yield outlist
 
