@@ -225,8 +225,8 @@ def niftilist_to_array(nii_filelist, outdtype=None):
     outmat = np.zeros((len(nii_filelist), np.prod(vol.shape)), dtype=outdtype)
 
     try:
-        for i, vf in enumerate(nii_filelist):
-            vol = get_nii_data(vf)
+        for i, nii_file in enumerate(nii_filelist):
+            vol = get_nii_data(nii_file)
             outmat[i, :] = vol.flatten()
     except:
         log.exception('Error on reading file {0}.'.format(vf))
@@ -270,17 +270,19 @@ def niftilist_mask_to_array(nii_filelist, mask_file=None, outdtype=None):
     if not outdtype:
         outdtype = vol.dtype
 
-    mask = get_nii_data(mask_file)
-    mask_indices = np.where(mask > 0)
+    mask, indices = load_mask(mask_file)
 
     outmat = np.zeros((len(nii_filelist), np.count_nonzero(mask)),
                       dtype=outdtype)
 
     try:
-        for i, vf in enumerate(nii_filelist):
-            vol = get_nii_data(vf)
-            outmat[i, :] = vol[mask_indices]
+        for i, nii_file in enumerate(nii_filelist):
+            if not are_compatible_imgs(nii_file, mask_file):
+                raise NiftiFilesNotCompatible(nii_file, mask_file)
+
+            vol = get_nii_data(nii_file)
+            outmat[i, :] = vol[indices]
     except Exception as exc:
         log.exception('Error on reading file {0}.'.format(vf))
-
-    return outmat, mask_indices, mask.shape
+    finally:
+        return outmat, mask_indices, mask.shape
