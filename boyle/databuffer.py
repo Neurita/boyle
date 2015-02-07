@@ -376,9 +376,7 @@ class NumpyHDFStore(HDFStore):
 
     def put_df_as_ndarray(self, key, df, range_values, loop_multiindex=False,
                           unstack=False, fill_value=0, fill_method=None):
-        """
-        Returns a PyTables HDF Array from df in the shape given by its index columns
-        range values.
+        """Returns a PyTables HDF Array from df in the shape given by its index columns range values.
 
         :param key: string object
 
