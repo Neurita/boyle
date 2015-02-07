@@ -126,12 +126,32 @@ def get_masked_nii_data(nii_file, mask_file):
         nibf = nib.load(nii_file)
         vol = nibf.get_data()
 
-        mask = get_nii_data(mask_file)
-        mask_indices = np.where(mask > 0)
-        return vol[mask_indices], mask_indices, mask.shape
+        mask, indices = load_mask(mask_file)
+        return vol[indices], indices, mask.shape
 
     except Exception:
         log.exception('Reading file {0}.'.format(nii_file))
+
+
+def load_mask (mask_file):
+    """Load a Nifti mask volume.
+
+    Parameters
+    ----------
+    mask_file: str
+        Nifti mask file path
+
+    Returns
+    -------
+    mask: numpy array
+        Volume array data from mask file.
+
+    indices: numpy array
+        Indices of the non-zero voxels, i.e., np.where(mask > 0)
+    """
+    mask    = get_nii_data(maskf)
+    indices = np.where(mask > 0)
+    return mask, indices
 
 
 def vector_to_volume(vector, mask_indices, mask_shape, dtype=None):
