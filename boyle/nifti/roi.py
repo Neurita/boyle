@@ -285,5 +285,6 @@ def get_3D_from_4D(nii_file, vol_idx=0):
         raise IndexError(msg)
 
     new_vol = vol[:, :, :, vol_idx].copy()
+    hdr.set_data_shape(hdr.get_data_shape()[:3])
 
     return new_vol, hdr, aff

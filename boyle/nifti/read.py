@@ -135,7 +135,7 @@ def get_masked_nii_data(nii_file, mask_file):
         return vol[indices], indices, mask.shape
 
 
-def load_mask (mask_file):
+def load_mask(mask_file):
     """Load a Nifti mask volume.
 
     Parameters
