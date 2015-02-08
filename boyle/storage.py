@@ -90,7 +90,7 @@ def save_variables_to_shelve(file_path, variables):
     mashelf.close()
 
 
-def save_variables_to_mat(file_path, variables):
+def save_variables_to_mat(file_path, variables, format='5'):
     """
 
     Parameters
@@ -99,10 +99,15 @@ def save_variables_to_mat(file_path, variables):
 
     variables: dict
         Dictionary with objects. Object name -> object
+
+    format : {'5', '4'}, string, optional
+        '5' (the default) for MATLAB 5 and up (to 7.2),
+        '4' for MATLAB 4 .mat files
+        See scipy.io.savemat dostrings.
     """
 
     try:
-        sio.savemat(file_path, variables, format='4')
+        sio.savemat(file_path, variables, format=format)
     except:
         log.exception('Error saving to {}'.format(file_path))
         raise
@@ -124,21 +129,17 @@ def save_variables_to_hdf5(file_path, variables, mode='w', h5path='/'):
         'r+' for read/write
         'w' for destroying then writing
     """
-    #h5file = tabs.open_file(outfpath, mode=mode,
-    #                        title=os.path.basename(outfpath))
-    h5file = h5py.File(file_path, mode)
-
+    h5file  = h5py.File(file_path, mode=mode)
     h5group = h5file.require_group(h5path)
 
     try:
-        for vn in variables.keys():
+        for vn in variables:
             h5group[vn] = variables[vn]
-
     except:
-        log.exception('Error saving to .hdf5: {0}'.format(vn))
+        log.exception('Error saving {0} in {1}'.format(vn, file_path))
         raise
-
-    h5file.close()
+    finally:
+        h5file.close()
 
 
 class ExportData(object):
@@ -169,7 +170,7 @@ class ExportData(object):
             output_file = add_extension_if_needed(filename, '.pyshelf')
             ext = get_extension(filename)
 
-        if ext == '.pyshelf' or '.shelf':
+        if ext == '.pyshelf' or ext == '.shelf':
             save_variables_to_shelve(output_file, variables)
 
         elif ext == '.mat':

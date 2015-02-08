@@ -1,4 +1,5 @@
 
+import os
 import logging
 import numpy                         as np
 from   nipy.algorithms.kernel_smooth import LinearFilter
@@ -28,11 +29,12 @@ class NiftiSubjectsSet(ItemSet):
     """
 
     def __init__(self, subj_files, mask_file=None, all_same_shape=True):
-        self.items = []
-        self.labels = []
+        self.items          = []
+        self.labels         = []
         self.all_same_shape = all_same_shape
+        self.others         = {}
+        self.mask_file      = mask_file
 
-        self.mask_file = mask_file
         self._init_subj_data(subj_files)
 
         if all_same_shape:
@@ -59,8 +61,7 @@ class NiftiSubjectsSet(ItemSet):
     def _check_subj_shapes(self):
         """
         """
-        shape = self.items[0].shape
-
+        shape      = self.items[0].shape
         mask_shape = self.get_mask_shape()
 
         for img in self.items:
@@ -86,7 +87,7 @@ class NiftiSubjectsSet(ItemSet):
             raise FileNotFound(file_path)
 
         try:
-            nii_img = load_nipy_img(file_path)
+            nii_img           = load_nipy_img(file_path)
             nii_img.file_path = file_path
             return nii_img
         except Exception as exc:
@@ -139,7 +140,7 @@ class NiftiSubjectsSet(ItemSet):
             try:
                 nii_img = self._load_image(get_abspath(sf))
                 self.items.append(nii_img)
-            except Exception as exc:
+            except Exception:
                 log.exception('Error while reading file {0}.'.format(sf))
 
     @property
@@ -273,8 +274,12 @@ class NiftiSubjectsSet(ItemSet):
 
         exporter = ExportData()
         content = {'data':         outmat,
+                   'labels':       self.labels,
                    'mask_indices': mask_indices,
-                   'mask_shape':   mask_shape,}
+                   'mask_shape':   mask_shape, }
+
+        if self.others:
+            content.update(self.others)
 
         log.debug('Creating content in file {}.'.format(output_file))
 
