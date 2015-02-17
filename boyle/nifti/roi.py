@@ -12,30 +12,40 @@
 
 import logging
 import numpy            as np
-import nibabel          as nib
 import scipy.ndimage    as scn
-from   scipy.ndimage.measurements   import center_of_mass
 from   collections                  import OrderedDict
 
-from   .read                        import get_nii_data, get_nii_info
+from   .check                       import repr_imgs, check_img
+from   .read                        import get_img_data, get_img_info
+from   .mask                        import create_mask_from
 from   ..utils.strings              import search_list
 
 
 log = logging.getLogger(__name__)
 
 
-def drain_rois(img_data):
-    """
-    Find all the ROIs in img_data and returns a similar volume with the ROIs
+def drain_rois(img):
+    """Find all the ROIs in img_data and returns a similar volume with the ROIs
     emptied, keeping only their border voxels.
 
     This is useful for DTI tractography.
 
-    @param img_data: numpy array
+    Parameters
+    ----------
+    img: img-like object or str
+        Can either be:
+        - a file path to a Nifti image
+        - any object with get_data() and get_affine() methods, e.g., nibabel.Nifti1Image.
+        If niimg is a string, consider it as a path to Nifti image and
+        call nibabel.load on it. If it is an object, check if get_data()
+        and get_affine() methods are present, raise TypeError otherwise.
 
-    @return:
-    an array of same shape as img_data
+    Returns
+    -------
+    np.ndarray
+        an array of same shape as img_data
     """
+    img_data = get_img_data(img)
 
     out = np.zeros(img_data.shape, dtype=img_data.dtype)
 
@@ -45,6 +55,10 @@ def drain_rois(img_data):
         kernel = np.ones([3, 3, 3], dtype=int)
     elif img_data.ndim == 4:
         kernel = np.ones([3, 3, 3, 3], dtype=int)
+    else:
+        msg = 'Could not build an erosion kernel for image {} with shape {}.'.format(repr_imgs(img),
+                                                                                     img_data.shape)
+        raise ValueError(msg)
 
     vals = np.unique(img_data)
     vals = vals[vals != 0]
@@ -86,47 +100,32 @@ def create_rois_mask(roislist, filelist):
     return create_mask_from(roifiles)
 
 
-def create_mask_from(filelist):
-    """
-    Creates a binarised mask with the files in
-    filelist.
-
-    @param filelist: list of strings
-    List of paths to the volume files containing the ROIs.
-
-    @return: ndarray of int
-    Mask volume
-    """
-    shape = nib.load(filelist[0]).shape
-    mask  = np.zeros(shape)
-
-    #create space for all features and read from subjects
-    for volf in filelist:
-        try:
-            roivol = nib.load(volf).get_data()
-            mask += roivol
-        except Exception as exc:
-            log.error(exc)
-            raise
-
-    return (mask > 0).astype(int)
-
-
-def get_roilist_from_atlas(atlas):
+def get_roilist_from_atlas(atlas_img):
     """
     Extract unique values from the atlas and returns them as an ordered list.
 
-    @param atlas: ndarray
-    Volume defining different ROIs.
+    Parameters
+    ----------
+    atlas_img: img-like object or str
+        Volume defining different ROIs.
+        Can either be:
+        - a file path to a Nifti image
+        - any object with get_data() and get_affine() methods, e.g., nibabel.Nifti1Image.
+        If niimg is a string, consider it as a path to Nifti image and
+        call nibabel.load on it. If it is an object, check if get_data()
+        and get_affine() methods are present, raise TypeError otherwise.
 
-    @return: ndarray
-    An 1D array of roi values from atlas volume.
+    Returns
+    -------
+    np.ndarray
+        An 1D array of roi values from atlas volume.
 
     Note
     ----
     The roi with value 0 will be considered background so will be removed.
     """
-    rois = np.unique(atlas)
+    atlas_data = check_img(atlas_img)
+    rois = np.unique(atlas_data)
     rois = rois[np.nonzero(rois)]
     rois.sort()
 
@@ -188,13 +187,13 @@ def extract_timeseries_dict(tsvol, roivol, maskvol=None, roi_list=None):
 
     for r in roi_list:
         if maskvol is not None:
-            #get all masked time series within this roi r
+            # get all masked time series within this roi r
             ts = tsvol[(roivol == r) * (maskvol > 0), :]
         else:
-            #get all time series within this roi r
+            # get all time series within this roi r
             ts = tsvol[roivol == r, :]
 
-        #remove zeroed time series
+        # remove zeroed time series
         ts = ts[ts.sum(axis=1) != 0, :]
 
         if len(ts) == 0:
@@ -239,13 +238,13 @@ def extract_timeseries_list(tsvol, roivol, maskvol=None, roi_list=None):
     ts_list = []
     for r in roi_list:
         if maskvol is None:
-            #get all masked time series within this roi r
+            # get all masked time series within this roi r
             ts = tsvol[(roivol == r) * (maskvol > 0), :]
         else:
-            #get all time series within this roi r
+            # get all time series within this roi r
             ts = tsvol[roivol == r, :]
 
-        #remove zeroed time series
+        # remove zeroed time series
         ts = ts[ts.sum(axis=1) != 0, :]
         if len(ts) == 0:
             ts = np.zeros(tsvol.zeros(tsvol.shape[-1]))
@@ -255,13 +254,19 @@ def extract_timeseries_list(tsvol, roivol, maskvol=None, roi_list=None):
     return ts_list
 
 
-def get_3D_from_4D(nii_file, vol_idx=0):
+def get_3D_from_4D(image, vol_idx=0):
     """Return a 3D volume from a 4D nifti image file
 
     Parameters
     ----------
-    nii_file: str
-        Path to the 4D Nifti file
+    image: img-like object or str
+        Volume defining different ROIs.
+        Can either be:
+        - a file path to a Nifti image
+        - any object with get_data() and get_affine() methods, e.g., nibabel.Nifti1Image.
+        If niimg is a string, consider it as a path to Nifti image and
+        call nibabel.load on it. If it is an object, check if get_data()
+        and get_affine() methods are present, raise TypeError otherwise.
 
     vol_idx: int
         Index of the 3D volume to be extracted from the 4D volume.
@@ -271,20 +276,22 @@ def get_3D_from_4D(nii_file, vol_idx=0):
     vol, hdr, aff
         The data array, the image header and the affine transform matrix.
     """
-    vol      = get_nii_data(nii_file)
-    hdr, aff = get_nii_info(nii_file)
+    img      = check_img(image)
+    hdr, aff = get_img_info(img)
 
-    if vol.ndim != 4:
-        msg = 'Volume in {} does not have 4 dimensions.'.format(nii_file)
+    if len(img.shape) != 4:
+        msg = 'Volume in {} does not have 4 dimensions.'.format(repr_imgs(img))
         log.error(msg)
         raise ValueError(msg)
 
-    if not 0 <= vol_idx < vol.shape[3]:
-        msg = 'IndexError: 4th dimension in volume {} has {} volumes, not {}.'.format(nii_file, vol.shape[3], vol_idx)
+    if not 0 <= vol_idx < img.shape[3]:
+        msg = 'IndexError: 4th dimension in volume {} has {} volumes, not {}.'.format(repr_imgs(img), img.shape[3], vol_idx)
         log.error(msg)
         raise IndexError(msg)
 
-    new_vol = vol[:, :, :, vol_idx].copy()
+    img_data = img.get_data()
+    new_vol  = img_data[:, :, :, vol_idx].copy()
+
     hdr.set_data_shape(hdr.get_data_shape()[:3])
 
     return new_vol, hdr, aff
