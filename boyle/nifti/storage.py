@@ -12,47 +12,62 @@
 import os
 
 import h5py
-import numpy as np
+import numpy   as np
 import nibabel as nib
 import logging
 
-import nipy.core.image as niim
-from nipy import save_image
+from   .check          import repr_imgs
 
 log = logging.getLogger(__name__)
 
 
-def save_niigz(file_path, vol, header=None, affine=None):
+def save_niigz(filepath, vol, header=None, affine=None):
     """Saves a volume into a Nifti (.nii.gz) file.
 
     Parameters
     ----------
     vol: Numpy 3D or 4D array
         Volume with the data to be saved.
+
     file_path: string
         Output file name path
-    affine: 4x4 Numpy array
+
+    affine: (optional) 4x4 Numpy array
         Array with the affine transform of the file.
-    header: nibabel.nifti1.Nifti1Header, optional
+        This is needed if vol is a np.ndarray.
+
+    header: (optional) nibabel.nifti1.Nifti1Header, optional
         Header for the file, optional but recommended.
+        This is needed if vol is a np.ndarray.
 
     Note
     ----
-        affine and header only work for numpy volumes.
-
+    affine and header only work for numpy volumes.
     """
+    # delayed import because could not install nipy on Python 3 on OSX
+    import nipy.core.image as     niim
+    from   nipy            import save_image
+
     if isinstance(vol, np.ndarray):
-        log.debug('Saving numpy nifti file: ' + file_path)
+        log.debug('Saving numpy nifti file: {}.'.format(filepath))
         ni = nib.Nifti1Image(vol, affine, header)
-        nib.save(ni, file_path)
+        nib.save(ni, filepath)
 
     elif isinstance(vol, nib.Nifti1Image):
-        log.debug('Saving nibabel nifti file: ' + file_path)
-        nib.save(vol, file_path)
+        log.debug('Saving nibabel nifti file: {}.'.format(filepath))
+        nib.save(vol, filepath)
 
     elif isinstance(vol, niim.Image):
-        log.debug('Saving nibabel nifti file: ' + file_path)
-        save_image(vol, file_path)
+        log.debug('Saving nipy nifti file: {}.'.format(filepath))
+        save_image(vol, filepath)
+
+    #elif isinstance(vol, NeuroImage):
+    #    log.debug('Saving boyle.NeuroImage nifti file: {}.'.format(filepath))
+    #    nib.save(vol.img, filepath)
+
+    else:
+        msg = 'Could not recognise input vol filetype. Got: {}.'.format(repr_imgs(vol))
+        raise ValueError(msg)
 
 
 def spatialimg_to_hdfgroup(h5group, spatial_img):
@@ -74,7 +89,7 @@ def spatialimg_to_hdfgroup(h5group, spatial_img):
 
     """
     try:
-        h5group['data'] = spatial_img.get_data()
+        h5group['data']   = spatial_img.get_data()
         h5group['affine'] = spatial_img.get_affine()
 
         if hasattr(h5group, 'get_extra'):
@@ -297,7 +312,7 @@ def insert_volumes_in_one_dataset(file_path, h5path, file_list, newshape=None,
         if isalambda(newshape):
             nushapes = np.array([newshape(shape) for shape in shapes])
         else:
-            nushapes = np.array([newshape for shape in shapes])
+            nushapes = np.array([shape for shape in shapes])
 
     #checking if concat_axis is available in this new shapes
     for nushape in nushapes:
@@ -327,7 +342,6 @@ def insert_volumes_in_one_dataset(file_path, h5path, file_list, newshape=None,
 
                 #get the shape of the current image
                 nushape = nushapes[ic, :]
-                ndims = len(nushape)
 
                 def append_to_dataset(h5ds, idx, data, concat_axis):
                     """
@@ -365,6 +379,6 @@ def insert_volumes_in_one_dataset(file_path, h5path, file_list, newshape=None,
 
                 ic += 1
 
-        except ValueError as ve:
-            log.error('Error creating group ' + h5path)
-            print(str(ve))
+        except ValueError:
+            log.exception('Error creating group {} in hdf file {}'.format(h5path, file_path))
+            raise
