@@ -1,3 +1,14 @@
+# coding=utf-8
+"""
+Utilities for Dicom file management.
+"""
+# ------------------------------------------------------------------------------
+# Author: Alexandre Manhaes Savio <alexsavio@gmail.com>
+#
+# 2015, Alexandre Manhaes Savio
+# Use this at your own risk!
+# ------------------------------------------------------------------------------
+
 import os
 import os.path as op
 
