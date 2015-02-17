@@ -14,6 +14,7 @@ import shelve
 import logging
 import h5py
 import scipy.io as sio
+import numpy as np
 import pandas as pd
 
 from .files.names import (get_extension,
@@ -128,13 +129,25 @@ def save_variables_to_hdf5(file_path, variables, mode='w', h5path='/'):
         Most used here:
         'r+' for read/write
         'w' for destroying then writing
+
+    Notes
+    -----
+    It is recommended to use numpy arrays as objects.
+    List or tuples of strings won't work, convert them into numpy.arrays before.
     """
     h5file  = h5py.File(file_path, mode=mode)
     h5group = h5file.require_group(h5path)
 
     try:
         for vn in variables:
-            h5group[vn] = variables[vn]
+            data = variables[vn]
+
+            # fix for string numpy arrays
+            if hasattr(data, 'dtype') and (data.dtype.type is np.string_ or data.dtype.type is np.unicode_):
+                dt   = h5py.special_dtype(vlen=str)
+                data = data.astype(dt)
+
+            h5group[vn] = data
     except:
         log.exception('Error saving {0} in {1}'.format(vn, file_path))
         raise
