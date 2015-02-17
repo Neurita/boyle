@@ -5,9 +5,11 @@ from __future__ import unicode_literals, print_function
 from os.path import join, expanduser
 
 import os
-import sys
 import socket
 import logging
+
+log = logging.getLogger(__name__)
+
 
 # import the correct configparser
 try:
@@ -15,9 +17,6 @@ try:
     from configparser import ExtendedInterpolation
 except ImportError:
     log.exception("The Python2 builtin configparser won't work, please install the module: pip install configparser")
-
-
-log = logging.getLogger(__name__)
 
 
 def merge(dict_1, dict_2):
@@ -64,7 +63,7 @@ def get_config(appname, section, config_file=None, additional_search_path=None):
     config = configparser.ConfigParser(interpolation=ExtendedInterpolation())
     files  = get_config_filepaths(appname, config_file, additional_search_path)
     read   = config.read(files)
-    log.debug('files read: {}'.format(read))
+    log.debug('Configuration rcfiles read: {}'.format(read))
 
     cfg_items = {}
     if config.has_section(section):
@@ -134,6 +133,14 @@ def rcfile(appname, section=None, args={}, strip_dashes=True):
 
         [appname:mylinux]
         var=3
+
+
+    For boolean flags do not try to use 'True' or 'False', 'on' or 'off', '1' or '0'.
+    Unless you are willing to parse this values by yourself.
+    We recommend commenting the variables out with '#' if you want to set a flag to False and
+    check if it is in the rcfile cfg dict, i.e.:
+
+        flag_value = 'flag_variable' in cfg
 
 
     Files are read from: /etc/appname/config,
