@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import unicode_literals, print_function
-from os.path import join, expanduser
 
 import os
+import os.path as op
 import socket
 import logging
 
@@ -38,22 +38,22 @@ def get_environment(appname):
 
 
 def get_config_filepaths(appname, config_file=None, additional_search_path=None):
-    home = expanduser('~')
+    home = op.expanduser('~')
     files = [
-        join('/etc', appname, 'config'),
-        join('/etc', '%src' % appname),
-        join(home, '.config', appname, 'config'),
-        join(home, '.config', appname),
-        join(home, '.%s' % appname, 'config'),
-        join(home, '.%src' % appname),
+        op.join('/etc', appname, 'config'),
+        op.join('/etc', '%src' % appname),
+        op.join(home, '.config', appname, 'config'),
+        op.join(home, '.config', appname),
+        op.join(home, '.%s' % appname, 'config'),
+        op.join(home, '.%src' % appname),
         '%src' % appname,
         '.%src' % appname,
         config_file or '',
     ]
 
     if additional_search_path is not None:
-        files.extend([join(additional_search_path,  '%src' % appname),
-                      join(additional_search_path, '.%src' % appname),
+        files.extend([op.join(additional_search_path,  '%src' % appname),
+                      op.join(additional_search_path, '.%src' % appname),
                       ])
 
     return files
@@ -85,6 +85,67 @@ def get_sections(appname, config_file=None, additional_search_path=None):
     log.debug('files read: {}'.format(read))
 
     return config.sections()
+
+
+def get_sys_path(rcpath, app_name, section_name=None):
+    """Return a folder path if it exists.
+
+    First will check if it is an existing system path, if it is, will return it expananded and absoluted.
+
+    If this fails will look for the rcpath variable in the app_name rcfiles or exclusively within the
+    given section_name, if given.
+
+    Parameters
+    ----------
+    rcpath: str
+        Existing folder path or variable name in app_name rcfile with an existing one.
+
+    section_name: str
+        Name of a section in the app_name rcfile to look exclusively there for variable names.
+
+    app_name: str
+        Name of the application to look for rcfile configuration files.
+
+    Returns
+    -------
+    sys_path: str
+        A expanded absolute file or folder path if the path exists.
+
+    Raises
+    ------
+    IOError if the proposed sys_path does not exist.
+    """
+    # first check if it is an existing path
+    if not op.exists(rcpath):
+        log.debug('Could not find path {} looking for variable in section {} of {}rc '
+                  'config setup with this name.'.format(rcpath, section_name, app_name))
+    else:
+        return op.realpath(op.expanduser(rcpath))
+
+    # look for the rcfile
+    try:
+        settings = rcfile(app_name, section_name)
+    except:
+        raise
+
+    # look for the variable within the rcfile configutarions
+    try:
+        sys_path = op.expanduser(settings[rcpath])
+    except KeyError:
+        msg = 'Could not find an existing a variable with name {0} in section {1} of {2}rc ' \
+              'config setup.'.format(rcpath, section_name, app_name)
+        log.exception(msg)
+        raise IOError(msg)
+    # found the variable, now check if it is an existing path
+    else:
+        if not op.exists(sys_path):
+            msg = 'Could not find the path {3} indicated by the variable {0} in section {1} of {2}rc ' \
+                  'config setup.'.format(rcpath, section_name, app_name, sys_path)
+            log.error(msg)
+            raise IOError(msg)
+        else:
+            # expand the path and return
+            return op.realpath(op.expanduser(sys_path))
 
 
 def rcfile(appname, section=None, args={}, strip_dashes=True):
