@@ -143,38 +143,6 @@ def load_nipy_img(nii_file):
         raise
 
 
-def vector_to_volume(vector, mask_indices, mask_shape, dtype=None):
-    """Transform a given vector to a volume. This is a reshape function for
-    3D flattened and maybe masked vectors.
-
-    Parameters
-    ----------
-    vector: np.array
-
-    mask_indices: tuple of ndarrays
-        mask_indices = np.where(mask > 0)
-
-    mask_shape: tuple
-
-    dtype: return type
-        If None, will get the type from vector
-
-    Returns
-    -------
-    np.ndarray
-    """
-    if dtype is None:
-        dtype = vector.dtype
-
-    try:
-        volume = np.zeros(mask_shape, dtype=dtype)
-        volume[mask_indices] = vector
-        return volume
-    except Exception:
-        log.exception('Error on transforming vector to volume.')
-        raise
-
-
 def niftilist_to_array(img_filelist, outdtype=None):
     """
     From the list of absolute paths to nifti files, creates a Numpy array

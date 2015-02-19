@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from collections import OrderedDict
-from macuto.more_collections import merge_dict_of_lists
+from boyle.more_collections import merge_dict_of_lists
 
 
 def test_merge_dict_of_lists():

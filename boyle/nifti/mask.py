@@ -204,21 +204,17 @@ def apply_mask(image, mask_img):
         mask = check_img(mask_img)
         check_img_compatibility(img, mask)
     except:
-        msg = 'Images {} and {} are not compatible.'.format(repr_imgs(image), repr_imgs(mask_img))
-        log.exception(msg)
-        raise NiftiFilesNotCompatible(repr_imgs(image), repr_imgs(mask_img))
+        raise
 
     try:
-        vol       = img.get_data()
-        mask      = load_mask(mask_img)
-        mask_data = get_data (mask)
-        indices   = np.where (mask_data)
+        vol          = img.get_data()
+        mask_data, _ = load_mask_data(mask)
     except:
         msg = 'Error applying mask {} to {}.'.format(repr_imgs(mask_img), repr_imgs(img))
         log.exception(msg)
         raise ValueError(msg)
     else:
-        return vol[mask_data], indices
+        return vol[mask_data], mask_data
 
 
 def apply_mask_4d(image, mask_img): # , smooth_mm=None, remove_nans=True):
@@ -250,12 +246,10 @@ def apply_mask_4d(image, mask_img): # , smooth_mm=None, remove_nans=True):
 
     Returns
     -------
-    vol[mask_indices], mask_indices
+    session_series, mask_data
 
     session_series: numpy.ndarray
-        2D array of series with shape (image number, voxel number)
-
-    mask_indices: numpy.ndarray
+        2D array of series with shape (voxel number, image number)
 
     Note
     ----
@@ -270,19 +264,17 @@ def apply_mask_4d(image, mask_img): # , smooth_mm=None, remove_nans=True):
         mask = check_img(mask_img)
         check_img_compatibility(img, mask, only_check_3d=True)
     except:
-        msg = 'Images {} and {} are not compatible.'.format(repr_imgs(image), repr_imgs(mask_img))
-        log.exception(msg)
-        raise NiftiFilesNotCompatible(repr_imgs(image), repr_imgs(mask_img))
+        raise
 
     try:
         vol = get_data(img)
-        data, indices = _apply_mask_to_4d_data(vol, mask)
+        series, mask_data = _apply_mask_to_4d_data(vol, mask)
     except:
         msg = 'Error applying mask {} to {}.'.format(repr_imgs(image), repr_imgs(mask_img))
         log.exception(msg)
         raise ValueError(msg)
     else:
-        return data, indices, vol.shape
+        return series, mask_data
 
 
 def _apply_mask_to_4d_data(vol_data, mask_img):
@@ -294,12 +286,13 @@ def _apply_mask_to_4d_data(vol_data, mask_img):
 
     Returns
     -------
-    vol[mask_indices], mask_indices, mask.shape
+    masked_data, mask_indices
 
-    : numpy.ndarray
+    masked_data: numpy.ndarray
         2D array of series with shape (image number, voxel number)
 
-    mask_indices:
+    mask_indices: tuple
+        tuple: np.where(mask)
 
     Note
     ----
@@ -311,7 +304,86 @@ def _apply_mask_to_4d_data(vol_data, mask_img):
     except:
         raise
     else:
-        return data, np.where(mask_data)
+        return data, mask_data
+
+
+
+def vector_to_volume(arr, mask, order='C'):
+    """Transform a given vector to a volume. This is a reshape function for
+    3D flattened and maybe masked vectors.
+
+    Parameters
+    ----------
+    arr: np.array
+        1-Dimensional array
+
+    mask: numpy.ndarray
+        Mask image. Must have 3 dimensions, bool dtype.
+
+    Returns
+    -------
+    np.ndarray
+    """
+    if mask.dtype != np.bool:
+        raise ValueError("mask must be a boolean array")
+
+    if arr.ndim != 1:
+        raise ValueError("vector must be a 1-dimensional array")
+
+    volume = np.zeros(mask.shape[:3], dtype=arr.dtype, order=order)
+    volume[mask] = arr
+    return volume
+
+
+def matrix_to_4dvolume(arr, mask, order='C'):
+    """Transform a given vector to a volume. This is a reshape function for
+    4D flattened masked matrices where the second dimension of the matrix
+    corresponds to the original 4th dimension.
+
+    Parameters
+    ----------
+    arr: numpy.array
+        2D numpy.array
+
+    mask: numpy.ndarray
+        Mask image. Must have 3 dimensions, bool dtype.
+
+    dtype: return type
+        If None, will get the type from vector
+
+    Returns
+    -------
+    data: numpy.ndarray
+        Unmasked data.
+        Shape: (mask.shape[0], mask.shape[1], mask.shape[2], X.shape[1])
+    """
+    if mask.dtype != np.bool:
+        raise ValueError("mask must be a boolean array")
+
+    if arr.ndim != 2:
+        raise ValueError("X must be a 2-dimensional array")
+
+    data = np.zeros(mask.shape + (arr.shape[1],), dtype=arr.dtype,
+                    order=order)
+    data[mask, :] = arr
+    return data
+
+    #
+    # if matrix.ndim != 2:
+    #     raise ValueError('A 2D matrix was expected but got a matrix with {} dimensios.'.format(matrix.ndim))
+    #
+    # if dtype is None:
+    #     dtype = matrix.dtype
+    #
+    # vols_num = matrix.shape[1]
+    # volume = np.zeros(mask_shape + (vols_num, ), dtype=dtype)
+    # try:
+    #     for i in range(vols_num):
+    #         volume[mask_indices[0], mask_indices[1], mask_indices[2], i] = matrix[:, i]
+    # except Exception:
+    #     raise#ValueError('Error on transforming matrix to volume.')
+    # else:
+    #     return volume
 
 
 def niftilist_mask_to_array(img_filelist, mask_file=None, outdtype=None):
@@ -349,11 +421,10 @@ def niftilist_mask_to_array(img_filelist, mask_file=None, outdtype=None):
     if not outdtype:
         outdtype = img.dtype
 
-    mask      = load_mask   (mask_file)
-    mask_data = get_img_data(mask)
-    indices   = np.where    (mask_data)
+    mask_data, _ = load_mask_data(mask_file)
+    indices      = np.where      (mask_data)
 
-    outmat = np.zeros((len(img_filelist), np.count_nonzero(mask)),
+    outmat = np.zeros((len(img_filelist), np.count_nonzero(mask_data)),
                       dtype=outdtype)
 
     try:
@@ -368,4 +439,4 @@ def niftilist_mask_to_array(img_filelist, mask_file=None, outdtype=None):
         log.exception('Error when reading file {0}.'.format(repr_imgs(img)))
         raise
     else:
-        return outmat, indices, mask_data.shape
+        return outmat, mask_data

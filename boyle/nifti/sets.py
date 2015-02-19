@@ -19,7 +19,6 @@ from   .read              import load_nipy_img, get_img_data, repr_imgs
 from   .mask              import load_mask
 from   .check             import check_img_compatibility
 from   .neuroimage        import NeuroImage
-from   .smooth            import smooth_img
 from   ..files.names      import get_abspath
 from   ..more_collections import ItemSet
 from   ..storage          import ExportData
@@ -97,6 +96,10 @@ class NeuroImageSet(ItemSet):
         else:
             return None
 
+    def clear_caches(self):
+        for img in self.items:
+            img.clear_data()
+
     def check_compatibility(self, one_img, another_img=None):
         """
         Parameters
@@ -165,7 +168,7 @@ class NeuroImageSet(ItemSet):
         self.labels = labels
 
     def _load_images_and_labels(self, images, labels=None):
-
+        """Read the images, load them into self.items and set the labels."""
         if not isinstance(images, (list, tuple)):
             raise ValueError('Expected an iterable (list or tuple) of strings or img-like objects. '
                              'Got a {}.'.format(type(images)))
@@ -258,13 +261,17 @@ class NeuroImageSet(ItemSet):
         outmat = np.zeros((self.n_subjs, ) + subj_flat_shape, dtype=outdtype)
         try:
             for i, image in enumerate(self.items):
-                vol = smooth_img(image, smooth_fwhm).get_data()
-                if mask_indices is not None:
-                    outmat[i] = vol[mask_indices]
-                else:
-                    outmat[i] = vol.flatten()
+                if smooth_fwhm > 0:
+                    image.fwhm = smooth_fwhm
+
+                if self.has_mask:
+                    image.set_mask(self.mask)
+
+                outmat[i, :], _, _ = image.mask_and_flatten()
+                image.clear_data()
+
         except Exception:
-            log.exception('Flattening file {0}'.format(image))
+            log.exception('Error flattening file {0}'.format(image))
             raise
         else:
             return outmat, mask_indices, mask_shape
@@ -313,7 +320,6 @@ class NeuroImageSet(ItemSet):
             content.update(self.others)
 
         log.debug('Creating content in file {}.'.format(output_file))
-
         try:
             exporter.save_variables(output_file, content)
         except:

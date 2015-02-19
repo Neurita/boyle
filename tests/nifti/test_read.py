@@ -1,22 +1,18 @@
 
-import os
-import os.path as op
-from   boyle.nifti.read import vector_to_volume, read_img
+from   boyle.nifti.read import read_img
+from   test_data import msk2path
 
 
-def test_read_img_reads_file():
-    imgpath = op.join(os.environ['FSLDIR'], 'data/standard/MNI152_T1_2mm_brain_mask.nii.gz')
-    img     = read_img(imgpath)
+def test_read_img_reads_path():
+    img     = read_img(msk2path)
     assert(img is not None)
 
 
 def test_read_img_reads_img():
-    imgpath = op.join(os.environ['FSLDIR'], 'data/standard/MNI152_T1_2mm_brain_mask.nii.gz')
-    img  = read_img(imgpath)
+    imgp  = read_img(msk2path)
 
-    img = read_img(img)
+    img = read_img(imgp)
     assert(img is not None)
-
 
 def test_read_img_raises():
     #imgpath = op.join(os.environ['FSLDIR'], 'data/standard/MNI152_T1_2mm_brain_mask')

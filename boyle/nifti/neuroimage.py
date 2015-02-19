@@ -15,9 +15,9 @@ import logging
 import numpy    as np
 
 from   .check   import check_img, check_img_compatibility, repr_imgs
-from   .read    import get_data, get_img_data
-from   .mask    import load_mask, _apply_mask_to_4d_data
-from   .smooth  import smooth_img
+from   .read    import get_data
+from   .mask    import load_mask, _apply_mask_to_4d_data, vector_to_volume, matrix_to_4dvolume
+from   .smooth  import _smooth_data_array
 from   .storage import save_niigz
 
 log = logging.getLogger(__name__)
@@ -62,18 +62,27 @@ class NeuroImage(object):
         self.img         = check_img(image, make_it_3d=make_it_3d)
         self._caching    = 'fill' if cache_data else 'unchanged'
         self.mask        = None
-        self.data        = None
-        self.smooth_fwhm = None
+        self.zeroe()
+
+    def zeroe(self):
+        self._smooth_fwhm     = 0
         self._is_data_masked = False
+        self._is_data_smooth = False
 
     def clear(self):
-        self.mask = None
         self.clear_data()
+        self.zeroe()
+        self.img  = None
+        self.mask = None
+        gc.collect()
 
     def clear_data(self):
-        self.data = None
-        self._is_data_masked = False
+        self.img.uncache()
+        self.mask.uncache()
         gc.collect()
+
+    def has_data_loaded(self):
+        return self.img.in_memory
 
     @property
     def ndim(self):
@@ -89,25 +98,43 @@ class NeuroImage(object):
     def dtype(self):
         return self.img.get_data_dtype()
 
-    def has_data_loaded(self):
-        return self.data is not None
+    @property
+    def smooth_fwhm(self):
+        return self._smooth_fwhm
 
     def get_filename(self):
         if hasattr(self.img, 'get_filename'):
             return self.img.get_filename()
         return None
 
+    @smooth_fwhm.setter
+    def smooth_fwhm(self, fwhm):
+        if fwhm != self._smooth_fwhm:
+            self._is_data_smooth = False
+        self._smooth_fwhm = fwhm
+
     def has_mask(self):
         return self.mask is not None
 
-    def get_data(self, masked=True, safe_copy=False):
+    def remove_smoothing(self):
+        self._smooth_fwhm = 0
+        self.clear_img()
+
+    def remove_masking(self):
+        self.clear_mask()
+        self.mask = None
+
+    def get_data(self, smoothed=True, masked=True, safe_copy=False):
         """Get the data in the image.
          If save_copy is True, will perform a deep copy of the data and return it.
 
         Parameters
         ----------
+        smoothed: (optional) bool
+            If True and self._smooth_fwhm > 0 will smooth the data before masking.
+
         masked: (optional) bool
-            If True and self.has_mask will return the masked data, the whole data otherwise.
+            If True and self.has_mask will return the masked data, the plain data otherwise.
 
         safe_copy: (optional) bool
 
@@ -115,29 +142,36 @@ class NeuroImage(object):
         -------
         np.ndarray
         """
-        if self.has_data_loaded() and not safe_copy and masked == self._is_data_masked:
-            return self.data
+        if not safe_copy and smoothed == self._is_data_smooth and masked == self._is_data_masked:
+            if self.has_data_loaded() and self._caching == 'fill':
+                return self.get_data()
 
         if safe_copy:
             data = get_data(self.img)
         else:
             data = self.img.get_data(caching=self._caching)
 
+        is_smoothed = False
+        if smoothed and self._smooth_fwhm > 0:
+            try:
+                data = _smooth_data_array(data, self.get_affine(), self._smooth_fwhm, copy=False)
+            except:
+                raise
+            else:
+                is_smoothed = True
+
         is_data_masked = False
         if masked and self.has_mask():
             try:
-                data = self._mask_data(data)
-                is_data_masked = True
-            except ValueError:
-                pass
+                data = self.unmask(self._mask_data(data)[0])
             except:
-                msg = 'Error masking data file {} with mask {}'.format(self, repr_imgs(self.mask))
-                log.exception(msg)
-                return None
+                raise
+            else:
+                is_data_masked = True
 
         if not safe_copy:
-            self.data = data
             self._is_data_masked = is_data_masked
+            self._is_data_smooth = is_smoothed
 
         return data
 
@@ -151,7 +185,7 @@ class NeuroImage(object):
 
     def get_mask_indices(self):
         if self.has_mask():
-            return np.where(get_img_data(self.mask))
+            return np.where(self.mask.get_data())
         else:
             log.error('Error looking for mask_indices but this {} has not mask set up.'.format(self))
             return None
@@ -172,10 +206,10 @@ class NeuroImage(object):
 
         Returns
         -------
-        vol[mask_indices], mask_indices, mask.shape
+        The masked data deepcopied
         """
         self.set_mask(mask_img)
-        return self.get_masked_data()
+        return self.get_data(masked=True, smoothed=True, safe_copy=True)
 
     def set_mask(self, mask_img):
         """Sets a mask img to this. So every operation to self, this mask will be taken into account.
@@ -201,7 +235,7 @@ class NeuroImage(object):
         """
         try:
             mask = load_mask(mask_img, allow_empty=True)
-            check_img_compatibility(self.img, mask)
+            check_img_compatibility(self.img, mask, only_check_3d=True)
         except:
             log.exception('Error setting up mask {} for {}.'.format(repr_imgs(mask_img), self))
             raise
@@ -225,8 +259,9 @@ class NeuroImage(object):
         Other exceptions related to numpy computations.
         """
         try:
+            msk_data = self.mask.get_data()
             if self.ndim == 3:
-                return data[self.mask]
+                return data[msk_data], np.where(msk_data)
             elif self.ndim == 4:
                 return _apply_mask_to_4d_data(data, self.mask)
             else:
@@ -236,51 +271,61 @@ class NeuroImage(object):
         except:
             raise
 
-    def get_masked_data(self):
-        """Return the voxels in self.img that are within the self.mask, the mask indices
-        and the mask shape. This works either if self.img is 3D or 4D data. If it is 4D, will apply
-        the 3D mask to every
+    def apply_smoothing(self, smooth_fwhm):
+        """Set self._smooth_fwhm and then smooths the data.
+        See boyle.nifti.smooth.smooth_imgs.
 
         Returns
         -------
-        vol[mask_indices]
-        """
-        try:
-            return self.get_data(masked=True, safe_copy=True)
-        except:
-            log.exception('Error extracting data from {1} using mask {0}.'.format(repr_imgs(self.mask), self))
-            return None
+        the smoothed data deepcopied.
 
-    def mask_flatten(self):
+        """
+        if smooth_fwhm <= 0:
+            return
+
+        old_smooth_fwhm   = self._smooth_fwhm
+        self._smooth_fwhm = smooth_fwhm
+        try:
+            data = self.get_data(smoothed=True, masked=True, safe_copy=True)
+        except:
+            log.exception('Error smoothing image {} with a {} FWHM mm kernel.'.format(self, smooth_fwhm))
+            self._smooth_fwhm = old_smooth_fwhm
+            raise
+        else:
+            self._smooth_fwhm = smooth_fwhm
+            return data
+
+    def mask_and_flatten(self):
         """Return a vector of the masked data.
 
         Returns
         -------
         np.ndarray, tuple of indices (np.ndarray), tuple of the mask shape
-
         """
         if self.has_mask():
-            return self.get_data()[self.mask], np.where(get_img_data(self.mask)), self.mask.shape
+            return self.get_data(smoothed=True, masked=True, safe_copy=False)[self.get_mask_indices()],\
+                   self.get_mask_indices(), self.mask.shape
         else:
             log.error('Error flattening image data but this {} has not mask set up.'.format(self))
             return None
 
-    def smooth(self, smooth_fwhm):
-        """See boyle.nifti.smooth.smooth_img"""
-        try:
-            img = smooth_img([self.img], fwhm=smooth_fwhm)
-        except:
-            log.error('Error smoothing image {} with a {} FWHM mm kernel.'.format(self, smooth_fwhm))
-            raise
-        else:
-            self.img = img
-            self.smooth_fwhm = smooth_fwhm
+    def unmask(self, arr):
+        """Use self.mask to reshape arr and self.img to get an affine and header to create
+        a new self.img using the data in arr.
+        If self.has_mask() is False, will return the same arr.
+        """
+        if not self.has_mask():
+            log.error('Error no mask found to reshape the given array.')
+            return arr
 
-    # TODO
-    # def unmask(self, arr):
-    #     """Use self.mask to reshape arr and self.img to get an affine and header to create a new self.img using
-    #     the data in arr.
-    #     """
+        if arr.ndim == 2:
+            return matrix_to_4dvolume(arr, self.mask.get_data())
+        elif arr.ndim == 1:
+            return vector_to_volume(arr, self.mask.get_data())
+        else:
+            raise ValueError('The given array has {} dimensions while my mask has {}. '
+                             'Masked data must be 1D or 2D array. '.format(arr.ndim,
+                                                                           len(self.mask.shape)))
 
     def to_file(self, outpath):
         """Save this object instance in outpath.

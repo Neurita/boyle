@@ -1,7 +1,7 @@
 
-from macuto.config import DICOM_FIELD_WEIGHTS
-from macuto.dicom.sets import GenericDicomsList
-from macuto.exceptions import LoggedError
+from boyle.config import DICOM_FIELD_WEIGHTS
+from boyle.dicom.sets import GenericDicomsList
+from boyle.exceptions import LoggedError
 
 datadir_hd = '/media/alexandre/cobre/santiago/test' #HD 4.2GB in 9981 DICOMS
 #%timeit dicoms = DicomFileList(datadir_hd, store_metadata=True)
@@ -18,8 +18,8 @@ def test_DicomHeader():
 
     import os
     from collections import namedtuple
-    from macuto.dicom.utils import DicomFile
-    from macuto.dicom.utils import is_dicom_file
+    from boyle.dicom.utils import DicomFile
+    from boyle.dicom.utils import is_dicom_file
 
     def _get_dicoms(build_dcm, root_path, header_fields=None):
         #return [build_dcm(dp, f, header_fields) for dp, dn, filenames in os.walk(root_path)

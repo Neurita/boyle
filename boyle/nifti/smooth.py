@@ -34,7 +34,7 @@ log = logging.getLogger(__name__)
 
 def smooth_volume(image, smoothmm):
     """See smooth_img."""
-    return smooth_img(image, smoothmm)
+    return smooth_imgs(image, smoothmm)
 
 
 def _smooth_data_array(arr, affine, fwhm, copy=True):
@@ -90,7 +90,7 @@ def _smooth_data_array(arr, affine, fwhm, copy=True):
         return arr
 
 
-def smooth_img(images, fwhm):
+def smooth_imgs(images, fwhm):
     """Smooth images using a Gaussian filter.
 
     Apply a Gaussian filter along the three first dimensions of each image in images.
@@ -109,9 +109,12 @@ def smooth_img(images, fwhm):
 
     Returns
     -------
-    smooth_img: nibabel.Nifti1Image or list of.
+    smooth_imgs: nibabel.Nifti1Image or list of.
         Smooth input image/s.
     """
+    if fwhm <= 0:
+        return images
+
     if not isinstance(images, string_types) and hasattr(images, '__iter__'):
         only_one = False
     else:
