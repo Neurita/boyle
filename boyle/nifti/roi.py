@@ -133,11 +133,17 @@ def get_roilist_from_atlas(atlas_img):
 
 
 def get_rois_centers_of_mass(vol):
-    """
-    :param vol: numpy ndarray
+    """Get the center of mass for each ROI in the given volume.
 
-    :return: OrderedDict
+    Parameters
+    ----------
+    vol: numpy ndarray
+        Volume with different values for each ROI.
 
+    Returns
+    -------
+    OrderedDict
+        Each entry in the dict has the ROI value as key and the center_of_mass coordinate as value.
     """
     from scipy.ndimage.measurements import center_of_mass
 
@@ -152,30 +158,32 @@ def get_rois_centers_of_mass(vol):
 
 
 def extract_timeseries_dict(tsvol, roivol, maskvol=None, roi_list=None):
-    """
-    Partitions the timeseries in tsvol according to the
+    """Partition the timeseries in tsvol according to the
     ROIs in roivol. If given, will use a mask to exclude any voxel
     outside of it.
 
-    @param tsvol: ndarray
-    4D timeseries volume
+    Parameters
+    ----------
+    tsvol: numpy.ndarray
+        4D timeseries volume
 
-    @param roivol: ndarray
-    3D ROIs volume
+    roivol: numpy.ndarray
+        3D ROIs volume
 
-    @param maskvol: ndarrat
-    3D mask volume
+    maskvol: numpy.ndarray
+        3D mask volume
 
-    @param zeroe: bool
-    If true will remove the null timeseries voxels.
+    zeroe: bool
+        If true will remove the null timeseries voxels.
 
-    @param roi_list: list of ROI values (int?)
-    List of the values of the ROIs to indicate the
-    order and which ROIs will be processed.
+    roi_list: list of ROI values (int?)
+        List of the values of the ROIs to indicate the
+        order and which ROIs will be processed.
 
-    @return: dict
-    A dict with the timeseries as items and
-    keys as the ROIs voxel values.
+    Returns
+    -------
+    ts_dict: OrderedDict
+        A dict with the timeseries as items and keys as the ROIs voxel values.
     """
     assert(tsvol.ndim == 4)
     assert(tsvol.shape[:3] == roivol.shape)
@@ -205,29 +213,32 @@ def extract_timeseries_dict(tsvol, roivol, maskvol=None, roi_list=None):
 
 
 def extract_timeseries_list(tsvol, roivol, maskvol=None, roi_list=None):
-    """
-    Partitions the timeseries in tsvol according to the
+    """Partition the timeseries in tsvol according to the
     ROIs in roivol. If given, will use a mask to exclude any voxel
     outside of it.
 
-    @param tsvol: ndarray
-    4D timeseries volume
+    Parameters
+    ----------
+    tsvol: numpy.ndarray
+        4D timeseries volume
 
-    @param roivol: ndarray
-    3D ROIs volume
+    roivol: numpy.ndarray
+        3D ROIs volume
 
-    @param maskvol: ndarray
-    3D mask volume
+    maskvol: numpy.ndarray
+        3D mask volume
 
-    @param zeroe: bool
-    If true will remove the null timeseries voxels.
+    zeroe: bool
+        If true will remove the null timeseries voxels.
 
-    @param roi_list: list of ROI values (int?)
-    List of the values of the ROIs to indicate the
-    order and which ROIs will be processed.
+    roi_list: list of ROI values (int?)
+        List of the values of the ROIs to indicate the
+        order and which ROIs will be processed.
 
-    @return: list
-    A list with the timeseries arrays as items
+    Returns
+    -------
+    ts_list: list
+        A list with the timeseries arrays as items
     """
     assert(tsvol.ndim == 4)
     assert(tsvol.shape[:3] == roivol.shape)

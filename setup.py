@@ -30,7 +30,7 @@ def read(*filenames):
 
 
 # Get version without importing, which avoids dependency issues
-module_name = find_packages(exclude=['tests'])[0]
+module_name    = find_packages(exclude=['tests'])[0]
 version_pyfile = op.join(module_name, 'version.py')
 exec(compile(open(version_pyfile).read(), version_pyfile, 'exec'))
 
@@ -48,7 +48,7 @@ setup_dict = dict(
     version=__version__,
     description='Medical Image Conversion and Input/Output Tools',
 
-    license='BSD 3-Clause',
+    license='new BSD',
     author='Alexandre M. Savio',
     author_email='alexsavio@gmail.com',
     maintainer='Alexandre M. Savio',
