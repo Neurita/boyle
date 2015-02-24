@@ -15,9 +15,9 @@ import numpy            as np
 import scipy.ndimage    as scn
 from   collections                  import OrderedDict
 
-from   .check                       import repr_imgs, check_img
-from   .read                        import get_img_data, get_img_info
-from   .mask                        import create_mask_from
+from   .check                       import check_img_compatibility, repr_imgs, check_img
+from   .read                        import read_img, get_img_data, get_img_info
+from   .mask                        import binarise, load_mask
 from   ..utils.strings              import search_list
 
 
@@ -73,20 +73,21 @@ def drain_rois(img):
 
 
 def create_rois_mask(roislist, filelist):
-    """
-    Looks for the files in filelist containing the names
-    in roislist, these files will be opened, binarised
+    """Look for the files in filelist containing the names in roislist, these files will be opened, binarised
     and merged in one mask.
 
-    @param roislist: list of strings
-    Names of the ROIs, which will have to be in the
-    names of the files in filelist.
+    Parameters
+    ----------
+    roislist: list of strings
+        Names of the ROIs, which will have to be in the names of the files in filelist.
 
-    @param filelist: list of strings
-    List of paths to the volume files containing the ROIs.
+    filelist: list of strings
+        List of paths to the volume files containing the ROIs.
 
-    @return: ndarray
-    Mask volume
+    Returns
+    -------
+    numpy.ndarray
+        Mask volume
     """
     roifiles = []
 
@@ -97,7 +98,7 @@ def create_rois_mask(roislist, filelist):
             log.error(exc)
             raise
 
-    return create_mask_from(roifiles)
+    return binarise(roifiles)
 
 
 def get_roilist_from_atlas(atlas_img):
@@ -194,10 +195,6 @@ def partition_timeseries(image, roi_img, mask_img, zeroe=True, roi_values=None, 
         argument.
 
     """
-    from   .mask  import load_mask
-    from   .read  import read_img
-    from   .check import check_img_compatibility
-
     img  = read_img (image)
     rois = read_img (roi_img)
 
