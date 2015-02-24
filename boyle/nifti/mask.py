@@ -307,7 +307,6 @@ def _apply_mask_to_4d_data(vol_data, mask_img):
         return data, mask_data
 
 
-
 def vector_to_volume(arr, mask, order='C'):
     """Transform a given vector to a volume. This is a reshape function for
     3D flattened and maybe masked vectors.
@@ -329,6 +328,10 @@ def vector_to_volume(arr, mask, order='C'):
 
     if arr.ndim != 1:
         raise ValueError("vector must be a 1-dimensional array")
+
+    if arr.ndim == 2 and any(v == 1 for v in arr.shape):
+        log.debug('Got an array of shape {}, flattening for my purposes.'.format(arr.shape))
+        arr = arr.flatten()
 
     volume = np.zeros(mask.shape[:3], dtype=arr.dtype, order=order)
     volume[mask] = arr
@@ -362,6 +365,10 @@ def matrix_to_4dvolume(arr, mask, order='C'):
 
     if arr.ndim != 2:
         raise ValueError("X must be a 2-dimensional array")
+
+    if mask.sum() != arr.shape[0]:
+        # raise an error if the shape of arr is not what expected
+        raise ValueError('Expected arr of shape ({}, samples). Got {}.'.format(mask.sum(), arr.shape))
 
     data = np.zeros(mask.shape + (arr.shape[1],), dtype=arr.dtype,
                     order=order)

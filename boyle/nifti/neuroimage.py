@@ -65,7 +65,7 @@ class NeuroImage(object):
         self.zeroe()
 
     def zeroe(self):
-        self._smooth_fwhm     = 0
+        self._smooth_fwhm    = 0
         self._is_data_masked = False
         self._is_data_smooth = False
 
@@ -115,6 +115,9 @@ class NeuroImage(object):
 
     def has_mask(self):
         return self.mask is not None
+
+    def is_smoothed(self):
+        return self._is_data_smooth
 
     def remove_smoothing(self):
         self._smooth_fwhm = 0
@@ -336,10 +339,11 @@ class NeuroImage(object):
             Output file path
         """
         try:
-            if not self.has_mask():
+            if not self.has_mask() and not self.is_smoothed():
                 save_niigz(outpath, self.img)
             else:
-                save_niigz(outpath, self.get_data(masked=True), self.get_header(), self.get_affine())
+                save_niigz(outpath, self.get_data(masked=True, smoothed=True),
+                           self.get_header(), self.get_affine())
         except:
             log.exception('Error saving {} in file {}.'.format(self, outpath))
             raise

@@ -157,10 +157,88 @@ def get_rois_centers_of_mass(vol):
     return rois_centers
 
 
-def extract_timeseries_dict(tsvol, roivol, maskvol=None, roi_list=None):
-    """Partition the timeseries in tsvol according to the
-    ROIs in roivol. If given, will use a mask to exclude any voxel
-    outside of it.
+def partition_timeseries(image, roi_img, mask_img, zeroe=True, roi_values=None, outdict=False):
+    """Partition the timeseries in tsvol according to the ROIs in roivol.
+    If a mask is given, will use it to exclude any voxel outside of it.
+
+    The outdict indicates whether you want a dictionary for each set of timeseries keyed by the ROI value
+    or a list of timeseries sets. If True and roi_img is not None will return an OrderedDict, if False
+    or roi_img or roi_list is None will return a list.
+
+    Parameters
+    ----------
+    image: img-like object or str
+        4D timeseries volume
+
+    roi_img: img-like object or str
+        3D volume defining different ROIs.
+
+    mask_img: img-like object or str
+        3D mask volume
+
+    zeroe: bool
+        If true will remove the null timeseries voxels.
+
+    roi_values: list of ROI values (int?)
+        List of the values of the ROIs to indicate the
+        order and which ROIs will be processed.
+
+    outdict: bool
+        If True will return an OrderedDict of timeseries sets, otherwise a list.
+
+    Returns
+    -------
+    timeseries: list or OrderedDict
+        A dict with the timeseries as items and keys as the ROIs voxel values or
+        a list where each element is the timeseries set ordered by the sorted values in roi_img or by the roi_values
+        argument.
+
+    """
+    from   .mask  import load_mask
+    from   .read  import read_img
+    from   .check import check_img_compatibility
+
+    img  = read_img (image)
+    rois = read_img (roi_img)
+
+    # check if roi_img and image are compatible
+    try:
+        check_img_compatibility(img, rois, only_check_3d=True)
+    except:
+        log.error('Given image and ROIs image are not compatible.')
+        raise
+
+    # check if rois has all roi_values
+    roi_data = rois.get_data()
+    if roi_values is not None:
+        for rv in roi_values:
+            if not np.any(roi_data == rv):
+                raise ValueError('Could not find value {} in rois_img {}.'.format(rv, repr_imgs(roi_img)))
+
+    # check if mask and image are compatible
+    mask = load_mask(mask_img)
+    try:
+        check_img_compatibility(img, mask, only_check_3d=True)
+    except:
+        log.error('Given image and mask image are not compatible.')
+        raise
+
+    # choose function to call
+    if outdict:
+        extract_data = _extract_timeseries_dict
+    else:
+        extract_data = _extract_timeseries_list
+
+    # extract data and return it
+    try:
+        return extract_data(img.get_data(), rois.get_data(), mask.get_data(), roi_values=roi_values, zeroe=zeroe)
+    except:
+        raise
+
+
+def _extract_timeseries_dict(tsvol, roivol, maskvol=None, roi_values=None, zeroe=True):
+    """Partition the timeseries in tsvol according to the ROIs in roivol.
+    If a mask is given, will use it to exclude any voxel outside of it.
 
     Parameters
     ----------
@@ -176,7 +254,7 @@ def extract_timeseries_dict(tsvol, roivol, maskvol=None, roi_list=None):
     zeroe: bool
         If true will remove the null timeseries voxels.
 
-    roi_list: list of ROI values (int?)
+    roi_values: list of ROI values (int?)
         List of the values of the ROIs to indicate the
         order and which ROIs will be processed.
 
@@ -185,15 +263,24 @@ def extract_timeseries_dict(tsvol, roivol, maskvol=None, roi_list=None):
     ts_dict: OrderedDict
         A dict with the timeseries as items and keys as the ROIs voxel values.
     """
-    assert(tsvol.ndim == 4)
-    assert(tsvol.shape[:3] == roivol.shape)
+    if tsvol.ndim != 4:
+        raise ValueError('Expected a timeseries volume with 4 dimensions. tsvol has {} dimensions.'.format(tsvol.ndim))
 
-    if roi_list is None:
-        roi_list = get_roilist_from_atlas(roivol)
+    if tsvol.shape[:3] != roivol.shape:
+        raise ValueError('Expected a ROI volume with the same 3D shape as the timeseries volume. '
+                         'In this case, tsvol has shape {} and roivol {}.'.format(tsvol.shape, roivol.shape))
+
+    if maskvol is not None:
+        if tsvol.shape[:3] != maskvol.shape:
+            raise ValueError('Expected a mask volume with the same 3D shape as the timeseries volume. '
+                             'In this case, tsvol has shape {} and maskvol {}.'.format(tsvol.shape, maskvol.shape))
+
+    if roi_values is None:
+        roi_values = get_roilist_from_atlas(roivol)
 
     ts_dict = OrderedDict()
 
-    for r in roi_list:
+    for r in roi_values:
         if maskvol is not None:
             # get all masked time series within this roi r
             ts = tsvol[(roivol == r) * (maskvol > 0), :]
@@ -202,7 +289,8 @@ def extract_timeseries_dict(tsvol, roivol, maskvol=None, roi_list=None):
             ts = tsvol[roivol == r, :]
 
         # remove zeroed time series
-        ts = ts[ts.sum(axis=1) != 0, :]
+        if zeroe:
+            ts = ts[ts.sum(axis=1) != 0, :]
 
         if len(ts) == 0:
             ts = np.zeros(tsvol.zeros(tsvol.shape[-1]))
@@ -212,10 +300,9 @@ def extract_timeseries_dict(tsvol, roivol, maskvol=None, roi_list=None):
     return ts_dict
 
 
-def extract_timeseries_list(tsvol, roivol, maskvol=None, roi_list=None):
-    """Partition the timeseries in tsvol according to the
-    ROIs in roivol. If given, will use a mask to exclude any voxel
-    outside of it.
+def _extract_timeseries_list(tsvol, roivol, maskvol=None, roi_values=None, zeroe=True):
+    """Partition the timeseries in tsvol according to the ROIs in roivol.
+    If a mask is given, will use it to exclude any voxel outside of it.
 
     Parameters
     ----------
@@ -231,7 +318,7 @@ def extract_timeseries_list(tsvol, roivol, maskvol=None, roi_list=None):
     zeroe: bool
         If true will remove the null timeseries voxels.
 
-    roi_list: list of ROI values (int?)
+    roi_values: list of ROI values (int?)
         List of the values of the ROIs to indicate the
         order and which ROIs will be processed.
 
@@ -240,14 +327,23 @@ def extract_timeseries_list(tsvol, roivol, maskvol=None, roi_list=None):
     ts_list: list
         A list with the timeseries arrays as items
     """
-    assert(tsvol.ndim == 4)
-    assert(tsvol.shape[:3] == roivol.shape)
+    if tsvol.ndim != 4:
+        raise ValueError('Expected a timeseries volume with 4 dimensions. tsvol has {} dimensions.'.format(tsvol.ndim))
 
-    if roi_list is None:
-        roi_list = get_roilist_from_atlas(roivol)
+    if tsvol.shape[:3] != roivol.shape:
+        raise ValueError('Expected a ROI volume with the same 3D shape as the timeseries volume. '
+                         'In this case, tsvol has shape {} and roivol {}.'.format(tsvol.shape, roivol.shape))
+
+    if maskvol is not None:
+        if tsvol.shape[:3] != maskvol.shape:
+            raise ValueError('Expected a mask volume with the same 3D shape as the timeseries volume. '
+                             'In this case, tsvol has shape {} and maskvol {}.'.format(tsvol.shape, maskvol.shape))
+
+    if roi_values is None:
+        roi_values = get_roilist_from_atlas(roivol)
 
     ts_list = []
-    for r in roi_list:
+    for r in roi_values:
         if maskvol is None:
             # get all masked time series within this roi r
             ts = tsvol[(roivol == r) * (maskvol > 0), :]
@@ -256,7 +352,9 @@ def extract_timeseries_list(tsvol, roivol, maskvol=None, roi_list=None):
             ts = tsvol[roivol == r, :]
 
         # remove zeroed time series
-        ts = ts[ts.sum(axis=1) != 0, :]
+        if zeroe:
+            ts = ts[ts.sum(axis=1) != 0, :]
+
         if len(ts) == 0:
             ts = np.zeros(tsvol.zeros(tsvol.shape[-1]))
 
@@ -266,7 +364,7 @@ def extract_timeseries_list(tsvol, roivol, maskvol=None, roi_list=None):
 
 
 def get_3D_from_4D(image, vol_idx=0):
-    """Return a 3D volume from a 4D nifti image file
+    """Pick one 3D volume from a 4D nifti image file
 
     Parameters
     ----------
