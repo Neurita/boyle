@@ -13,12 +13,12 @@
 import logging
 import numpy            as np
 import scipy.ndimage    as scn
-from   collections                  import OrderedDict
+from   collections      import OrderedDict
 
-from   .check                       import check_img_compatibility, repr_imgs, check_img
-from   .read                        import read_img, get_img_data, get_img_info
-from   .mask                        import binarise, load_mask
-from   ..utils.strings              import search_list
+from   .check           import check_img_compatibility, repr_imgs, check_img
+from   .read            import read_img, get_img_data, get_img_info
+from   .mask            import binarise, load_mask
+from   ..utils.strings  import search_list
 
 
 log = logging.getLogger(__name__)

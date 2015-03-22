@@ -223,7 +223,7 @@ def have_same_affine(one_img, another_img, only_check_3d=False):
 
 def _make_it_3d(img):
     """Enforce that img is a 3D img-like object, if it is not, raise a TypeError.
-    I.e., remove dimensions of size 1.
+    i.e., remove dimensions of size 1.
 
     Parameters
     ----------
@@ -239,7 +239,7 @@ def _make_it_3d(img):
 
     elif (len(shape) == 4 and shape[3] == 1):
         # "squeeze" the image.
-        data = get_data(img)
+        data   = get_data(img)
         affine = img.get_affine()
         return nib.Nifti1Image(data[:, :, :, 0], affine)
     else:
@@ -247,7 +247,7 @@ def _make_it_3d(img):
 
 
 def check_img(image, make_it_3d=False):
-    """Check that img is a proper img. Turn filenames into objects.
+    """Check that image is a proper img. Turn filenames into objects.
 
     Parameters
     ----------
