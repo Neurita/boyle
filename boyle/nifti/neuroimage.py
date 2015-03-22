@@ -23,8 +23,8 @@ from   .storage import save_niigz
 log = logging.getLogger(__name__)
 
 
-class NeuroImage(object):
-    """NeuroImage is a class that wraps around nibabel and nipy functionality and offers compatibility with
+class NiftiImage(object):
+    """NiftiImage is a class that wraps around nibabel and nipy functionality and offers compatibility with
     other external tools.
 
     Parameters
@@ -38,7 +38,8 @@ class NeuroImage(object):
         and get_affine() methods are present, raise TypeError otherwise.
 
     make_it_3d: boolean, optional
-        If True, check if the image is a 3D image and raise an error if not.
+        If True, check if the image is a 3D image, if there is a 4th dimension with size 1, will remove it.
+        In any other case will raise an error.
 
     Returns
     -------
@@ -107,8 +108,13 @@ class NeuroImage(object):
             return self.img.get_filename()
         return None
 
+    def pixdim(self):
+        """ Return the voxel size in the header of the file. """
+        return self.get_header().get_zooms()
+
     @smooth_fwhm.setter
     def smooth_fwhm(self, fwhm):
+        """ Set a smoothing Gaussian kernel given its FWHM in mm.  """
         if fwhm != self._smooth_fwhm:
             self._is_data_smooth = False
         self._smooth_fwhm = fwhm
@@ -121,10 +127,10 @@ class NeuroImage(object):
 
     def remove_smoothing(self):
         self._smooth_fwhm = 0
-        self.clear_img()
+        self.img.uncache()
 
     def remove_masking(self):
-        self.clear_mask()
+        self.mask.uncache()
         self.mask = None
 
     def get_data(self, smoothed=True, masked=True, safe_copy=False):
@@ -349,7 +355,13 @@ class NeuroImage(object):
             raise
 
     def __repr__(self):
-        return '<NeuroImage> ' + repr_imgs(self.img)
+        return '<NiftiImage> ' + repr_imgs(self.img)
 
     def __str__(self):
         return self.__repr__()
+
+
+class NeuroImage(NiftiImage):
+    def __repr__(self):
+        return '<NeuroImage> ' + repr_imgs(self.img)
+
