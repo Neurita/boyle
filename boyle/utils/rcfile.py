@@ -132,8 +132,8 @@ def get_sys_path(rcpath, app_name, section_name=None):
     try:
         sys_path = op.expanduser(settings[rcpath])
     except KeyError:
-        msg = 'Could not find an existing a variable with name {0} in section {1} of {2}rc ' \
-              'config setup.'.format(rcpath, section_name, app_name)
+        msg = 'Could not find an existing variable with name {0} in section {1} of {2}rc ' \
+              'config setup. Maybe it is a folder that could not be found.'.format(rcpath, section_name, app_name)
         log.exception(msg)
         raise IOError(msg)
     # found the variable, now check if it is an existing path
@@ -226,12 +226,69 @@ def rcfile(appname, section=None, args={}, strip_dashes=True):
 
     environ = get_environment(appname)
 
-    if section is None:
+    if section:
         section = appname
 
     config = get_config(appname, section, args.get('config', ''), args.get('path', ''))
 
     return merge(merge(args, config), environ)
+
+
+def get_rcfile_section(app_name, section_name):
+    """ Return the dictionary containing the rcfile section configuration variables.
+
+    Parameters
+    ----------
+    section_name: str
+        Name of the section in the rcfiles.
+
+    app_name: str
+        Name of the application to look for its rcfiles.
+
+    Returns
+    -------
+    settings: dict
+        Dict with variable values
+    """
+    try:
+        settings = rcfile(app_name, section_name)
+    except IOError:
+        raise
+    except:
+        msg = 'Error looking for section {} in {} rcfiles.'.format(section_name, app_name)
+        log.exception (msg)
+        raise KeyError(msg)
+    else:
+        return settings
+
+
+def get_rcfile_variable_value(var_name, app_name, section_name=None):
+    """ Return the value of the variable in the section_name section of the app_name rc file.
+
+    Parameters
+    ----------
+    var_name: str
+        Name of the variable to be searched for.
+
+    section_name: str
+        Name of the section in the rcfiles.
+
+    app_name: str
+        Name of the application to look for its rcfiles.
+
+    Returns
+    -------
+    var_value: str
+        The value of the variable with given var_name.
+    """
+    cfg = get_rcfile_section(app_name, section_name)
+
+    if var_name not in cfg:
+        msg = "Option {} not found in {} section.".format(var_name, section_name)
+        log.error(msg)
+        raise KeyError(msg)
+
+    return cfg[var_name]
 
 
 #class HostExtendedInterpolation(ExtendedInterpolation):
