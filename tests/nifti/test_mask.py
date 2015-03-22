@@ -13,7 +13,7 @@ NI_CLASES = (nib.Nifti1Image, boyle.nifti.NeuroImage)
 
 def test_load_mask_loads():
     mask     = load_mask(msk2path)
-    assert(isinstance(mask, NI_CLASES))
+    assert(isinstance(mask, boyle.nifti.NeuroImage))
 
 
 def test_load_mask_loads_boolean_volume():
