@@ -17,6 +17,12 @@ from glob import glob
 from ..utils.strings import search_list, filter_list
 
 
+def check_file_exists(filepath):
+    """Check if the file path exists, if not raise IOError"""
+    if not op.exists(filepath):
+        raise IOError('File {} not found.'.format(filepath))
+
+
 def dir_search(regex, wd=os.curdir):
     """
     @param regex: string
