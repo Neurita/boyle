@@ -60,6 +60,7 @@ def get_config_filepaths(appname, config_file=None, additional_search_path=None)
 
 
 def get_config(appname, section, config_file=None, additional_search_path=None):
+
     config = configparser.ConfigParser(interpolation=ExtendedInterpolation())
     files  = get_config_filepaths(appname, config_file, additional_search_path)
     read   = config.read(files)
@@ -90,7 +91,7 @@ def get_sections(appname, config_file=None, additional_search_path=None):
 def get_sys_path(rcpath, app_name, section_name=None):
     """Return a folder path if it exists.
 
-    First will check if it is an existing system path, if it is, will return it expananded and absoluted.
+    First will check if it is an existing system path, if it is, will return it expanded and absoluted.
 
     If this fails will look for the rcpath variable in the app_name rcfiles or exclusively within the
     given section_name, if given.
@@ -173,6 +174,11 @@ def rcfile(appname, section=None, args={}, strip_dashes=True):
         containing the merged variables of environment variables, config
         files and args.
 
+    Raises
+    ------
+    IOError
+        In case the return value is empty.
+
     Notes
     -----
     Environment variables are read if they start with appname in uppercase
@@ -226,12 +232,16 @@ def rcfile(appname, section=None, args={}, strip_dashes=True):
 
     environ = get_environment(appname)
 
-    if section:
+    if section is None:
         section = appname
 
     config = get_config(appname, section, args.get('config', ''), args.get('path', ''))
+    config = merge(merge(args, config), environ)
 
-    return merge(merge(args, config), environ)
+    if not config:
+        raise IOError('Could not find any rcfile for application {}.'.format(appname))
+
+    return config
 
 
 def get_rcfile_section(app_name, section_name):
@@ -284,12 +294,44 @@ def get_rcfile_variable_value(var_name, app_name, section_name=None):
     cfg = get_rcfile_section(app_name, section_name)
 
     if var_name not in cfg:
-        msg = "Option {} not found in {} section.".format(var_name, section_name)
-        log.error(msg)
-        raise KeyError(msg)
+        raise KeyError("Option {} not found in {} section.".format(var_name, section_name))
 
     return cfg[var_name]
 
+
+def find_in_sections(var_name, app_name):
+    """ Return the section and the value of the variable where the first var_name is found in the app_name rcfiles.
+
+    Parameters
+    ----------
+    var_name: str
+        Name of the variable to be searched for.
+
+    app_name: str
+        Name of the application to look for its rcfiles.
+
+    Returns
+    -------
+    section_name: str
+        Name of the section in the rcfiles where var_name was first found.
+
+    var_value: str
+        The value of the first variable with given var_name.
+    """
+    sections = get_sections(app_name)
+
+    if not sections:
+        raise ValueError('No sections found in {} rcfiles.'.format(app_name))
+
+    for s in sections:
+        try:
+            var_value = get_rcfile_variable_value(var_name, section_name=s, app_name=app_name)
+        except:
+            pass
+        else:
+            return s, var_value
+
+    raise KeyError('No variable {} has been found in {} rcfiles.'.format(var_name, app_name))
 
 #class HostExtendedInterpolation(ExtendedInterpolation):
 #    """Advanced variant of interpolation, supports the syntax used by
