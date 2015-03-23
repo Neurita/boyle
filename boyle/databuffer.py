@@ -308,18 +308,22 @@ class NumpyHDFStore(HDFStore):
 
         Parameters
         ----------
-        key : object
+        key : str
+
         value : {Series, DataFrame, Panel, Numpy ndarray}
+
         format : 'fixed(f)|table(t)', default is 'fixed'
-        fixed(f) : Fixed format
-        Fast writing/reading. Not-appendable, nor searchable
-        table(t) : Table format
-        Write as a PyTables Table structure which may perform
-        worse but allow more flexible operations like searching
-        / selecting subsets of the data
+            fixed(f) : Fixed format
+                Fast writing/reading. Not-appendable, nor searchable
+
+            table(t) : Table format
+                Write as a PyTables Table structure which may perform worse but allow more flexible operations
+                like searching/selecting subsets of the data
+
         append : boolean, default False
-        This will force Table format, append the input data to the
-        existing.
+            This will force Table format, append the input data to the
+            existing.
+
         encoding : default None, provide an encoding for strings
         """
         if not isinstance(value, np.ndarray):
