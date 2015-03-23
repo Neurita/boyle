@@ -101,6 +101,25 @@ def create_rois_mask(roislist, filelist):
     return binarise(roifiles)
 
 
+def get_unique_nonzeros(arr):
+    """ Return a sorted list of the non-zero unique values of arr.
+
+    Parameters
+    ----------
+    arr: numpy.ndarray
+        The data array
+
+    Returns
+    -------
+    list of items of arr.
+    """
+    rois = np.unique(arr)
+    rois = rois[np.nonzero(rois)]
+    rois.sort()
+
+    return rois
+
+
 def get_roilist_from_atlas(atlas_img):
     """
     Extract unique values from the atlas and returns them as an ordered list.
@@ -125,12 +144,7 @@ def get_roilist_from_atlas(atlas_img):
     ----
     The roi with value 0 will be considered background so will be removed.
     """
-    atlas_data = check_img(atlas_img)
-    rois = np.unique(atlas_data)
-    rois = rois[np.nonzero(rois)]
-    rois.sort()
-
-    return rois
+    return get_unique_nonzeros(check_img(atlas_img).get_data())
 
 
 def get_rois_centers_of_mass(vol):
@@ -211,6 +225,8 @@ def partition_timeseries(image, roi_img, mask_img, zeroe=True, roi_values=None, 
         for rv in roi_values:
             if not np.any(roi_data == rv):
                 raise ValueError('Could not find value {} in rois_img {}.'.format(rv, repr_imgs(roi_img)))
+    else:
+        roi_values = get_unique_nonzeros(roi_data)
 
     # check if mask and image are compatible
     mask = load_mask(mask_img)
@@ -273,10 +289,9 @@ def _extract_timeseries_dict(tsvol, roivol, maskvol=None, roi_values=None, zeroe
                              'In this case, tsvol has shape {} and maskvol {}.'.format(tsvol.shape, maskvol.shape))
 
     if roi_values is None:
-        roi_values = get_roilist_from_atlas(roivol)
+        roi_values = get_unique_nonzeros(roivol)
 
     ts_dict = OrderedDict()
-
     for r in roi_values:
         if maskvol is not None:
             # get all masked time series within this roi r
@@ -337,7 +352,7 @@ def _extract_timeseries_list(tsvol, roivol, maskvol=None, roi_values=None, zeroe
                              'In this case, tsvol has shape {} and maskvol {}.'.format(tsvol.shape, maskvol.shape))
 
     if roi_values is None:
-        roi_values = get_roilist_from_atlas(roivol)
+        roi_values = get_unique_nonzeros(roivol)
 
     ts_list = []
     for r in roi_values:
