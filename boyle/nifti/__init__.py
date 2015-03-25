@@ -1,3 +1,3 @@
 
 
-from .neuroimage import NeuroImage
+from .neuroimage import NiftiImage, NeuroImage
