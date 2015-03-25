@@ -1,21 +1,22 @@
 # coding=utf-8
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
-#Author: Alexandre Manhaes Savio <alexsavio@gmail.com>
-#Grupo de Inteligencia Computational <www.ehu.es/ccwintco>
-#Universidad del Pais Vasco UPV/EHU
+# Author: Alexandre Manhaes Savio <alexsavio@gmail.com>
+# Grupo de Inteligencia Computational <www.ehu.es/ccwintco>
+# Universidad del Pais Vasco UPV/EHU
 #
-#2013, Alexandre Manhaes Savio
-#Use this at your own risk!
+# 2013, Alexandre Manhaes Savio
+# Use this at your own risk!
 #-------------------------------------------------------------------------------
 
 import os
 import shelve
 import logging
 import h5py
+import os.path  as op
 import scipy.io as sio
-import numpy as np
-import pandas as pd
+import numpy    as np
+import pandas   as pd
 
 from .files.names import (get_extension,
                           add_extension_if_needed)
@@ -230,78 +231,162 @@ class ExportData(object):
         ExportData.save_variables(filename, variables)
 
 
-def load_varnames_from_hdf5(file_path, h5path='/'):
-    """
-    Returns all dataset names from h5path group in file_path.
+# -------------------------------------------------------------------------
+# HDF5 helpers
+# -------------------------------------------------------------------------
+def get_h5file(file_path, mode='r'):
+    """ Return the h5py.File given its file path.
 
     Parameters
     ----------
     file_path: string
         HDF5 file path
 
-    h5path: str
-        HDF5 group path
+    mode: string
+        r   Readonly, file must exist
+        r+  Read/write, file must exist
+        w   Create file, truncate if exists
+        w-  Create file, fail if exists
+        a   Read/write if exists, create otherwise (default)
 
     Returns
     -------
-    List of variable names contained in file_path
+    h5file: h5py.File
     """
-    def walk(group, node_type=h5py.Dataset):
-        for node in list(group.values()):
-            if isinstance(node, node_type):
-                yield node
+    if not op.exists(file_path):
+        raise IOError('Could not find file {}.'.format(file_path))
 
-    h5file  = h5py.File(file_path, mode='r')
-    varlist = []
     try:
-        h5group = h5file.require_group(h5path)
-
-        for node in walk(h5group):
-            varlist.append(node.name)
-
+        h5file  = h5py.File(file_path, mode=mode)
     except:
-        log.exception('ERROR reading .hdf5: {0}'.file_path)
         raise
-
-    h5file.close()
-
-    return varlist
+    else:
+        return h5file
 
 
-def load_variables_from_hdf5(file_path, h5path='/'):
+def get_group_names(h5file, h5path='/'):
+    """ Return the groups names within h5file/h5path
+
+    Parameters
+    ----------
+    h5file: h5py.File
+        HDF5 file object
+
+    h5path: str
+        HDF5 group path to get the group names from
+
+    Returns
+    -------
+    gnames: list of str
+        List of group names
+    """
+    return _get_node_names(h5file, h5path, node_type=h5py.Group)
+
+
+def get_dataset_names(h5file, h5path='/'):
+    """
+    Returns all dataset names from h5path group in h5file.
+
+    Parameters
+    ----------
+    h5file: h5py.File
+        HDF5 file object
+
+    h5path: str
+        HDF5 group path to read datasets from
+
+    Returns
+    -------
+    dsnames: list of str
+        List of dataset names contained in h5file/h5path
+    """
+    return _get_node_names(h5file, h5path, node_type=h5py.Dataset)
+
+
+def get_datasets(h5file, h5path='/'):
     """
     Returns all datasets from h5path group in file_path.
 
     Parameters
     ----------
-    file_path: str
-        HDF5 file path
+    h5file: h5py.File
+        HDF5 file object
 
     h5path: str
-        HDF5 group path
+        HDF5 group path to read datasets from
 
     Returns
     -------
-    Dict with variables contained in file_path
+    datasets: dict
+        Dict with variables contained in file_path/h5path
     """
-    def walk(group, node_type=h5py.Dataset):
-        for node in list(group.values()):
-            if isinstance(node, node_type):
-                yield node
+    return _get_nodes(h5file, h5path, node_type=h5py.Dataset)
 
-    h5file  = h5py.File(file_path, mode='r')
-    vardict = {}
+
+def _hdf5_walk(group, node_type=h5py.Dataset):
+    for node in list(group.values()):
+        if isinstance(node, node_type):
+            yield node
+
+
+def _get_node_names(h5file, h5path='/', node_type=h5py.Dataset):
+    """Return the node of type node_type names within h5path of h5file.
+
+    Parameters
+    ----------
+    h5file: h5py.File
+        HDF5 file object
+
+    h5path: str
+        HDF5 group path to get the group names from
+
+    node_type: h5py object type
+        HDF5 object type
+
+    Returns
+    -------
+    names: list of str
+        List of names
+    """
+    names = []
     try:
         h5group = h5file.require_group(h5path)
 
-        for node in walk(h5group):
-            node_name = os.path.basename(str(node.name))
-            vardict[node_name] = node.value
-
+        for node in _hdf5_walk(h5group, node_type=node_type):
+            names.append(node.name)
     except:
-        log.exception('ERROR reading .hdf5: {0}'.file_path)
         raise
+    else:
+        h5file.close()
+        return names
 
-    h5file.close()
 
-    return vardict
+def _get_nodes(h5file, h5path='/', node_type=h5py.Dataset):
+    """ Returns the nodes within h5path of the h5file.
+
+    Parameters
+    ----------
+    h5file: h5py.File
+        HDF5 file object
+
+    h5path: str
+        HDF5 group path to get the nodes from
+
+    node_type: h5py object type
+        The type of the nodes that you want to get
+
+    Returns
+    -------
+    nodes: list of node_type objects
+    """
+    names = []
+    try:
+        h5group = h5file.require_group(h5path)
+
+        for node in _hdf5_walk(h5group, node_type=node_type):
+            names.append(node)
+    except:
+        raise
+    else:
+        h5file.close()
+        return names
