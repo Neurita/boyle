@@ -357,7 +357,6 @@ def _get_node_names(h5file, h5path='/', node_type=h5py.Dataset):
     except:
         raise
     else:
-        h5file.close()
         return names
 
 
@@ -388,5 +387,4 @@ def _get_nodes(h5file, h5path='/', node_type=h5py.Dataset):
     except:
         raise
     else:
-        h5file.close()
         return names
