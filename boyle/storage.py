@@ -348,6 +348,9 @@ def _get_node_names(h5file, h5path='/', node_type=h5py.Dataset):
     names: list of str
         List of names
     """
+    if not h5path.startswith('/'):
+        h5path = '/' + h5path
+
     names = []
     try:
         h5group = h5file.require_group(h5path)
@@ -378,6 +381,9 @@ def _get_nodes(h5file, h5path='/', node_type=h5py.Dataset):
     -------
     nodes: list of node_type objects
     """
+    if not h5path.startswith('/'):
+        h5path = '/' + h5path
+
     names = []
     try:
         h5group = h5file.require_group(h5path)
