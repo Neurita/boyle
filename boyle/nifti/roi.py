@@ -1,13 +1,13 @@
 # coding=utf-8
-#-------------------------------------------------------------------------------
 
-#Author: Alexandre Manhaes Savio <alexsavio@gmail.com>
-#Grupo de Inteligencia Computational <www.ehu.es/ccwintco>
-#Universidad del Pais Vasco UPV/EHU
+# -------------------------------------------------------------------------------
+# Author: Alexandre Manhães Savio <alexsavio@gmail.com>
+# Grupo de Inteligencia Computational <www.ehu.es/ccwintco>
+# Universidad del Pais Vasco UPV/EHU
 #
-#2013, Alexandre Manhaes Savio
-#Use this at your own risk!
-#-------------------------------------------------------------------------------
+# 2013, Alexandre Manhaes Savio
+# Use this at your own risk!
+# -------------------------------------------------------------------------------
 
 
 import logging
@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 
 def drain_rois(img):
-    """Find all the ROIs in img_data and returns a similar volume with the ROIs
+    """Find all the ROIs in img and returns a similar volume with the ROIs
     emptied, keeping only their border voxels.
 
     This is useful for DTI tractography.

@@ -3,7 +3,7 @@
 A class to manage neuroimage files. A wrapper around nibabel and nipy for own purposes.
 """
 # ------------------------------------------------------------------------------
-# Author: Alexandre Manhaes Savio <alexsavio@gmail.com>
+# Author: Alexandre Manhães Savio <alexsavio@gmail.com>
 # Wrocław University of Technology
 #
 # 2015, Alexandre Manhaes Savio
