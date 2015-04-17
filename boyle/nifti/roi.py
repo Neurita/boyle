@@ -209,8 +209,8 @@ def partition_timeseries(image, roi_img, mask_img, zeroe=True, roi_values=None, 
         argument.
 
     """
-    img  = read_img (image)
-    rois = read_img (roi_img)
+    img  = read_img(image)
+    rois = read_img(roi_img)
 
     # check if roi_img and image are compatible
     try:
