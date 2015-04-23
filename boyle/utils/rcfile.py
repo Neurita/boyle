@@ -12,11 +12,17 @@ log = logging.getLogger(__name__)
 
 
 # import the correct configparser
-try:
+import sys
+if sys.version_info >= (3, 0):
     import configparser
-    from configparser import ExtendedInterpolation
-except ImportError:
-    log.exception("The Python2 builtin configparser won't work, please install the module: pip install configparser")
+    from   configparser import ExtendedInterpolation
+else:
+    try:
+        from backports              import configparser
+        from backports.configparser import ExtendedInterpolation
+    except ImportError:
+        log.exception("The Python2 builtin configparser won't work, please install the module: pip install configparser")
+        raise
 
 
 def merge(dict_1, dict_2):
