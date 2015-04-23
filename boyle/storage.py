@@ -289,8 +289,7 @@ def get_group_names(h5file, h5path='/'):
 
 
 def get_dataset_names(h5file, h5path='/'):
-    """
-    Returns all dataset names from h5path group in h5file.
+    """ Return all dataset names from h5path group in h5file.
 
     Parameters
     ----------
@@ -309,7 +308,7 @@ def get_dataset_names(h5file, h5path='/'):
 
 
 def get_datasets(h5file, h5path='/'):
-    """ Returns all datasets from h5path group in file_path.
+    """ Return all datasets from h5path group in file_path.
 
     Parameters
     ----------
@@ -328,7 +327,7 @@ def get_datasets(h5file, h5path='/'):
 
 
 def extract_datasets(h5file, h5path='/'):
-    """ Returns all dataset contents from h5path group in h5file in an OrderedDict.
+    """ Return all dataset contents from h5path group in h5file in an OrderedDict.
 
     Parameters
     ----------
@@ -411,7 +410,7 @@ def _get_node_names(h5file, h5path='/', node_type=h5py.Dataset):
 
 
 def _get_nodes(h5file, h5path='/', node_type=h5py.Dataset):
-    """ Returns the nodes within h5path of the h5file.
+    """ Return the nodes within h5path of the h5file.
 
     Parameters
     ----------
