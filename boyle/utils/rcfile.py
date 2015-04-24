@@ -12,11 +12,10 @@ log = logging.getLogger(__name__)
 
 
 # import the correct configparser
-import sys
-if sys.version_info >= (3, 0):
+try:
     import configparser
     from   configparser import ExtendedInterpolation
-else:
+except:
     try:
         from backports              import configparser
         from backports.configparser import ExtendedInterpolation
