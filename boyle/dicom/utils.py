@@ -177,10 +177,20 @@ def is_dicom_file(filepath):
 
 
 def group_dicom_files(dicom_paths, hdr_field='PatientID'):
-    """
+    """Group in a dictionary all the DICOM files in dicom_paths
+    separated by the given `hdr_field` tag value.
 
-    :param dicom_paths: str
-    :return: dict of dicom_paths
+    Parameters
+    ----------
+    dicom_paths: str
+        Iterable of DICOM file paths.
+
+    hdr_field: str
+        Name of the DICOM tag whose values will be used as key for the group.
+
+    Returns
+    -------
+    dicom_groups: dict of dicom_paths
     """
     dicom_groups = defaultdict(list)
     try:
@@ -194,30 +204,43 @@ def group_dicom_files(dicom_paths, hdr_field='PatientID'):
     return dicom_groups
 
 
-def call_dcm2nii(input_path):
-    """
+def call_dcm2nii(work_dir):
+    """Converts all DICOM files within work_dir into a NifTi file by calling dcm2nii on this folder.
 
-    :param input_path: str
-    :return:
+    Parameters
+    ----------
+    work_dir: str
+
+    Returns
+    -------
+    sys_code: int
+        dcm2nii execution return code
     """
     try:
-        log.info('dcm2nii {0}'.format(input_path))
-        return subprocess.call('dcm2nii {0}'.format(input_path),
+        log.info('dcm2nii {0}'.format(work_dir))
+        return subprocess.call('dcm2nii {0}'.format(work_dir),
                                shell=True)
 
-    except Exception as e:
-        log.exception('Error calling dcm2nii on {0}.'.format(input_path))
+    except Exception:
+        log.exception('Error calling dcm2nii on {0}.'.format(work_dir))
+        raise
 
 
-def anonymize_dicom_file(dcm_file, remove_private_tags=False,
-                         remove_curves=False):
+def anonymize_dicom_file(dcm_file, remove_private_tags=False, remove_curves=False):
     """Anonymizes the given dcm_file.
-
     Anonymizing means: putting nonsense information into tags:
     PatientName, PatientAddress and PatientBirthDate.
 
-    :param acqfolder: path.py path
-    Path to the DICOM file.
+    Parameters
+    ----------
+    dcm_file: str
+        Path to the DICOM file
+
+    remove_private_tags: bool
+        Flag for removing or not the private tags of the DICOM file.
+
+    remove_curves: bool
+        Removes the curve tags in the DICOM file.
     """
     assert(dcm_file.isfile())
 
@@ -265,12 +288,13 @@ def anonymize_dicom_file(dcm_file, remove_private_tags=False,
 
 def anonymize_dicom_file_dcmtk(dcm_file):
     """Anonymizes the given dcm_file.
-
     Anonymizing means: putting nonsense information into tags:
     PatientName, PatientAddress and PatientBirthDate.
 
-    :param acqfolder: path.py path
-    Path to the DICOM file.
+    Parameters
+    ----------
+    dcm_file: str
+        Path to the DICOM file.
     """
     assert(dcm_file.isfile())
 
