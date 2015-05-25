@@ -45,8 +45,14 @@ def save_niigz(filepath, vol, header=None, affine=None):
     affine and header only work for numpy volumes.
     """
     # delayed import because could not install nipy on Python 3 on OSX
-    import nipy.core.image as     niim
-    from   nipy            import save_image
+    we_have_nipy = False
+    try:
+        import nipy.core.image as     niim
+        from   nipy            import save_image
+    except:
+        log.error('Could not import nipy.')
+    else:
+        we_have_nipy = True
 
     if isinstance(vol, np.ndarray):
         log.debug('Saving numpy nifti file: {}.'.format(filepath))
@@ -57,9 +63,9 @@ def save_niigz(filepath, vol, header=None, affine=None):
         log.debug('Saving nibabel nifti file: {}.'.format(filepath))
         nib.save(vol, filepath)
 
-    elif isinstance(vol, niim.Image):
-        log.debug('Saving nipy nifti file: {}.'.format(filepath))
-        save_image(vol, filepath)
+    elif we_have_nipy and isinstance(vol, niim.Image):
+            log.debug('Saving nipy nifti file: {}.'.format(filepath))
+            save_image(vol, filepath)
 
     #elif isinstance(vol, NeuroImage):
     #    log.debug('Saving boyle.NeuroImage nifti file: {}.'.format(filepath))
