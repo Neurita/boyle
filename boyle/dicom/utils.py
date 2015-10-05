@@ -11,10 +11,9 @@ Utilities for Dicom file management.
 
 import os
 import os.path as op
+import logging
 
 import dicom
-import logging
-import subprocess
 from   collections   import defaultdict
 from   dicom.dataset import FileDataset
 
@@ -202,110 +201,6 @@ def group_dicom_files(dicom_paths, hdr_field='PatientID'):
         log.exception('Error reading file {0}.'.format(dcm))
 
     return dicom_groups
-
-
-def call_dcm2nii(work_dir):
-    """Converts all DICOM files within work_dir into a NifTi file by calling dcm2nii on this folder.
-
-    Parameters
-    ----------
-    work_dir: str
-
-    Returns
-    -------
-    sys_code: int
-        dcm2nii execution return code
-    """
-    try:
-        log.info('dcm2nii {0}'.format(work_dir))
-        return subprocess.call('dcm2nii {0}'.format(work_dir),
-                               shell=True)
-
-    except Exception:
-        log.exception('Error calling dcm2nii on {0}.'.format(work_dir))
-        raise
-
-
-def anonymize_dicom_file(dcm_file, remove_private_tags=False, remove_curves=False):
-    """Anonymizes the given dcm_file.
-    Anonymizing means: putting nonsense information into tags:
-    PatientName, PatientAddress and PatientBirthDate.
-
-    Parameters
-    ----------
-    dcm_file: str
-        Path to the DICOM file
-
-    remove_private_tags: bool
-        Flag for removing or not the private tags of the DICOM file.
-
-    remove_curves: bool
-        Removes the curve tags in the DICOM file.
-    """
-    assert(dcm_file.isfile())
-
-    # Load the current dicom file to 'anonymize'
-    plan = dicom.read_file(dcm_file)
-
-    plan.PatientName = 'Anonymous'
-    plan.PatientAddress = 'North Pole'
-
-    # Define call-back functions for the dataset.walk() function
-    def PN_callback(ds, data_element):
-        """Called from the dataset "walk" recursive function for all data elements."""
-        if data_element.VR == "PN":
-            data_element.value = 'Anonymous'
-
-    def curves_callback(ds, data_element):
-        """Called from the dataset "walk" recursive function for all data elements."""
-        if data_element.tag.group & 0xFF00 == 0x5000:
-            del ds[data_element.tag]
-
-    # Remove patient name and any other person names
-    plan.walk(PN_callback)
-
-    # Remove data elements (should only do so if DICOM type 3 optional)
-    # Use general loop so easy to add more later
-    # Could also have done: del ds.OtherPatientIDs, etc.
-    #for name in ['OtherPatientIDs']:
-    #    if name in plan:
-    #        delattr(ds, name)
-
-    # Same as above but for blanking data elements that are type 2.
-    for name in ['PatientsBirthDate']:
-        if name in plan:
-            plan.data_element(name).value = ''
-
-    # Remove private tags if function argument says to do so. Same for curves
-    if remove_private_tags:
-        plan.remove_private_tags()
-    if remove_curves:
-        plan.walk(curves_callback)
-
-    # write the 'anonymized' DICOM out under the new filename
-    plan.save_as(dcm_file)
-
-
-def anonymize_dicom_file_dcmtk(dcm_file):
-    """Anonymizes the given dcm_file.
-    Anonymizing means: putting nonsense information into tags:
-    PatientName, PatientAddress and PatientBirthDate.
-
-    Parameters
-    ----------
-    dcm_file: str
-        Path to the DICOM file.
-    """
-    assert(dcm_file.isfile())
-
-    subprocess.call('dcmodify --modify PatientName=Anonymous ' + dcm_file,
-                    shell=True)
-    subprocess.call('dcmodify --modify PatientBirthDate=17000101 ' + dcm_file,
-                    shell=True)
-    subprocess.call('dcmodify --modify PatientAddress=North Pole ' + dcm_file,
-                    shell=True)
-
-    os.remove(dcm_file + '.bak')
 
 
 if __name__ == '__main__':
