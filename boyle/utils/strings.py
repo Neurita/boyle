@@ -72,7 +72,7 @@ def match_list(lst, pattern, group_names=[]):
     """
     filtfn = re.compile(pattern).match
     filtlst = filter_list(lst, filtfn)
-    if group_names is None:
+    if not group_names:
         return [m.string for m in filtlst]
     else:
         return [m.group(group_names) for m in filtlst]
@@ -227,7 +227,7 @@ def to_unicode(unicode_or_str):
 
 
 # Python 2
-def to_str(unicode_or_str):
+def to_str2(unicode_or_str):
     if isinstance(unicode_or_str, unicode):
         value = unicode_or_str.encode('utf-8')
     else:
