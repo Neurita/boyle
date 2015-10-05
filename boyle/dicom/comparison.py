@@ -1,4 +1,6 @@
-__author__ = 'alexandre'
+"""
+ Functions to compare DICOM files headers for clustering
+"""
 
 import os
 import logging

@@ -1,3 +1,6 @@
+"""
+ Data storage in HDF5 helper functions for data persistence.
+"""
 # coding=utf-8
 # -------------------------------------------------------------------------------
 

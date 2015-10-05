@@ -389,7 +389,6 @@ def check_have_same_geometry(fname1, fname2):
     """
     @param fname1:
     @param fname2:
-    @return:
     """
     if not have_same_geometry(fname1, fname2):
         err = 'Different shapes:' + fname1 + ' vs. ' + fname2
@@ -401,7 +400,6 @@ def check_have_same_spatial_geometry(fname1, fname2):
     """
     @param fname1:
     @param fname2:
-    @return:
     """
     if not have_same_spatial_geometry(fname1, fname2):
         err = 'Different shapes:' + fname1 + ' vs. ' + fname2

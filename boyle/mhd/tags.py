@@ -34,7 +34,6 @@ MHD_TAGS = ['ObjectType',
             'StudyDate',
             'StudyTime']
 
-
 MHD_TO_NUMPY_TYPE   = {'MET_FLOAT' : np.float,
                        'MET_UCHAR' : np.uint8,
                        'MET_CHAR'  : np.int8,
