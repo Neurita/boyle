@@ -72,8 +72,7 @@ def save_niigz(filepath, vol, header=None, affine=None):
     #    nib.save(vol.img, filepath)
 
     else:
-        msg = 'Could not recognise input vol filetype. Got: {}.'.format(repr_imgs(vol))
-        raise ValueError(msg)
+        raise ValueError('Could not recognise input vol filetype. Got: {}.'.format(repr_imgs(vol)))
 
 
 def spatialimg_to_hdfgroup(h5group, spatial_img):
@@ -106,9 +105,7 @@ def spatialimg_to_hdfgroup(h5group, spatial_img):
             h5group['data'].attrs[k] = hdr[k]
 
     except ValueError as ve:
-        log.error('Error creating group ' + h5group.name)
-        log.error(ve)
-        raise
+        raise Exception('Error creating group ' + h5group.name) from ve
 
 
 def spatialimg_to_hdfpath(file_path, spatial_img, h5path=None, append=True):
@@ -157,9 +154,7 @@ def spatialimg_to_hdfpath(file_path, spatial_img, h5path=None, append=True):
             spatialimg_to_hdfgroup(h5img, spatial_img)
 
         except ValueError as ve:
-            log.error('Error creating group ' + h5path)
-            log.error(ve)
-            raise
+            raise Exception('Error creating group ' + h5path) from ve
 
 
 def hdfpath_to_nifti1image(file_path, h5path):
@@ -208,9 +203,7 @@ def hdfgroup_to_nifti1image(h5group):
         return img
 
     except KeyError as ke:
-        log.error('Could not read Nifti1Image datasets from ' + h5group.name)
-        log.error(str(ke))
-        raise
+        raise Exception('Could not read Nifti1Image datasets from ' + h5group.name) from ke
 
 
 def get_nifti1hdr_from_h5attrs(h5attrs):
@@ -385,6 +378,5 @@ def insert_volumes_in_one_dataset(file_path, h5path, file_list, newshape=None,
 
                 ic += 1
 
-        except ValueError:
-            log.exception('Error creating group {} in hdf file {}'.format(h5path, file_path))
-            raise
+        except ValueError as ve:
+            raise Exception('Error creating group {} in hdf file {}'.format(h5path, file_path)) from ve

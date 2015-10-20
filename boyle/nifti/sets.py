@@ -54,9 +54,8 @@ class NeuroImageSet(ItemSet):
         self.all_compatible = all_compatible
         try:
             self._load_images_and_labels(images, list(labels))
-        except:
-            log.exception('Error initializing NeuroImageSet when loading image set.')
-            raise
+        except Exception as exc:
+            raise Exception('Error initializing NeuroImageSet when loading image set.') from exc
 
     @property
     def n_subjs(self):
@@ -84,9 +83,8 @@ class NeuroImageSet(ItemSet):
 
         try:
             mask = load_mask(image)
-        except:
-            log.exception('Could not load mask image {}.'.format(image))
-            raise
+        except Exception as exc:
+            raise Exception('Could not load mask image {}.'.format(image)) from exc
         else:
             self._mask = mask
 
@@ -180,11 +178,12 @@ class NeuroImageSet(ItemSet):
         if labels is not None and len(labels) != len(images):
             raise ValueError('Expected the same length for image set ({}) and '
                              'labels list ({}).'.format(len(images), len(labels)))
-        try:
-            first_img = NeuroImage(images[0])
-        except:
-            log.exception('Error reading image {}.'.format(repr_imgs(images[0])))
-            raise
+
+        first_file = images[0]
+        if first_file:
+            first_img = NeuroImage(first_file)
+        else:
+            raise('Error reading image {}.'.format(repr_imgs(first_file)))
 
         for idx, image in enumerate(images):
             try:
@@ -224,9 +223,7 @@ class NeuroImageSet(ItemSet):
         vol_shape: Tuple with shape of the volumes, for reshaping.
         """
         if not self.all_compatible:
-            msg = 'self.all_compatible must be set to True in order to use this function.'
-            log.error(msg)
-            raise ValueError(msg)
+            raise ValueError("`self.all_compatible` must be True in order to use this function.")
 
         if not outdtype:
             outdtype = self.items[0].dtype
@@ -270,9 +267,8 @@ class NeuroImageSet(ItemSet):
                 outmat[i, :], _, _ = image.mask_and_flatten()
                 image.clear_data()
 
-        except Exception:
-            log.exception('Error flattening file {0}'.format(image))
-            raise
+        except Exception as exc:
+            raise Exception('Error flattening file {0}'.format(image)) from exc
         else:
             return outmat, mask_indices, mask_shape
 
@@ -304,11 +300,7 @@ class NeuroImageSet(ItemSet):
             Type of the elements of the array, if None will obtain the dtype from
             the first nifti file.
         """
-        try:
-            outmat, mask_indices, mask_shape = self.to_matrix(smooth_fwhm, outdtype)
-        except:
-            log.exception('Error creating data matrix.')
-            raise
+        outmat, mask_indices, mask_shape = self.to_matrix(smooth_fwhm, outdtype)
 
         exporter = ExportData()
         content = {'data':         outmat,
@@ -322,9 +314,8 @@ class NeuroImageSet(ItemSet):
         log.debug('Creating content in file {}.'.format(output_file))
         try:
             exporter.save_variables(output_file, content)
-        except:
-            log.exception('Error saving variables to file {}.'.format(output_file))
-            raise
+        except Exception as exc:
+            raise Exception('Error saving variables to file {}.'.format(output_file)) from exc
 
 
 class NiftiSubjectsSet(ItemSet):
@@ -370,9 +361,8 @@ class NiftiSubjectsSet(ItemSet):
                 self.from_dict(subj_files)
             else:
                 raise ValueError('Could not recognize subj_files argument variable type.')
-        except Exception:
-            log.exception('Cannot read subj_files input argument.')
-            raise
+        except Exception as exc:
+            raise Exception('Cannot read subj_files input argument.') from exc
 
     def _check_subj_shapes(self):
         """
@@ -407,9 +397,8 @@ class NiftiSubjectsSet(ItemSet):
             nii_img           = load_nipy_img(file_path)
             nii_img.file_path = file_path
             return nii_img
-        except:
-            log.exception('Reading file {0}.'.format(file_path))
-            raise
+        except Exception as exc:
+            raise Exception('Reading file {0}.'.format(file_path)) from exc
 
     @staticmethod
     def _smooth_img(nii_img, smooth_fwhm):
@@ -447,9 +436,9 @@ class NiftiSubjectsSet(ItemSet):
 
                 self.labels.extend([group_label]*len(group_files))
 
-            except:
-                log.exception('Error while reading files from '
-                              'group {0}.'.format(group_label))
+            except Exception as exc:
+                raise Exception('Error while reading files from '
+                                'group {0}.'.format(group_label)) from exc
 
     def from_list(self, subj_files):
         """
@@ -462,8 +451,8 @@ class NiftiSubjectsSet(ItemSet):
             try:
                 nii_img = self._load_image(get_abspath(sf))
                 self.items.append(nii_img)
-            except Exception:
-                log.exception('Error while reading file {0}.'.format(sf))
+            except Exception as exc:
+                raise Exception('Error while reading file {0}.'.format(sf)) from exc
 
     @property
     def n_subjs(self):
@@ -487,7 +476,7 @@ class NiftiSubjectsSet(ItemSet):
             (self.items)
         """
         if len(subj_labels) != self.n_subjs:
-            log.error('The number of given labels is not the same as the number of subjects.')
+            raise ValueError('The number of given labels is not the same as the number of subjects.')
 
         self.labels = subj_labels
 
@@ -542,9 +531,8 @@ class NiftiSubjectsSet(ItemSet):
                     outmat[i, :] = vol[mask_indices]
                 else:
                     outmat[i, :] = vol.flatten()
-        except Exception:
-            log.exception('Flattening file {0}'.format(nipy_img.file_path))
-            raise
+        except Exception as exc:
+            raise Exception('Error when flattening file {0}'.format(nipy_img.file_path)) from exc
         else:
             return outmat, mask_indices, mask_shape
 
@@ -580,11 +568,7 @@ class NiftiSubjectsSet(ItemSet):
             Type of the elements of the array, if None will obtain the dtype from
             the first nifti file.
         """
-        try:
-            outmat, mask_indices, mask_shape = self.to_matrix(smooth_fwhm, outdtype)
-        except:
-            log.exception('Error creating data matrix.')
-            raise
+        outmat, mask_indices, mask_shape = self.to_matrix(smooth_fwhm, outdtype)
 
         exporter = ExportData()
         content = {'data':         outmat,
@@ -599,6 +583,5 @@ class NiftiSubjectsSet(ItemSet):
 
         try:
             exporter.save_variables(output_file, content)
-        except:
-            log.exception('Error saving variables to file {}.'.format(output_file))
-            raise
+        except Exception as exc:
+            raise Exception('Error saving variables to file {}.'.format(output_file)) from exc

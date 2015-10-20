@@ -10,7 +10,6 @@ Utilities to compute/apply masking from Nifti images
 # Use this at your own risk!
 # ------------------------------------------------------------------------------
 
-import logging
 import numpy   as np
 import nibabel as nib
 
@@ -19,8 +18,6 @@ from ..exceptions       import NiftiFilesNotCompatible
 from ..utils.numpy_mem  import as_ndarray
 from .check             import (are_compatible_imgs, check_img, repr_imgs,
                                 check_img_compatibility, get_data)
-
-log = logging.getLogger(__name__)
 
 
 def load_mask(image, allow_empty=True):
@@ -47,8 +44,7 @@ def load_mask(image, allow_empty=True):
         img    = check_img(image, make_it_3d=True)
         values = np.unique(img.get_data())
     except:
-        log.exception('Error reading mask {}.'.format(repr_imgs(image)))
-        raise
+        raise Exception('Error reading mask {}.'.format(repr_imgs(image))) from exc
 
     if len(values) == 1:
         # We accept a single value if it is not 0 (full true mask).
@@ -91,9 +87,8 @@ def load_mask_data(image, allow_empty=True):
     """
     try:
         mask = load_mask(image, allow_empty=allow_empty)
-    except:
-        log.exception('Error loading mask {}.'.format(repr_imgs(image)))
-        raise
+    except Exception as exc:
+        raise Exception('Error loading mask {}.'.format(repr_imgs(image))) from exc
     else:
         return get_img_data(mask), mask.get_affine()
 
@@ -120,9 +115,8 @@ def binarise(image, threshold=0):
     try:
         img = check_img(image)
         vol = img.get_data() > threshold
-    except Exception:
-        log.exception('Error creating mask from file {0}.'.format(repr_imgs(image)))
-        raise
+    except Exception as exc:
+        raise Exception('Error creating mask from file {0}.'.format(repr_imgs(image))) from exc
     else:
         return vol
 
@@ -160,10 +154,8 @@ def union_mask(filelist):
             roiimg = check_img(volf)
             check_img_compatibility(firstimg, roiimg)
             mask  += get_img_data(roiimg)
-    except Exception:
-        msg = 'Error joining mask {} and {}.'.format(repr_imgs(firstimg), repr_imgs(roiimg))
-        log.exception(msg)
-        raise ValueError(msg)
+    except Exception as exc:
+        raise ValueError('Error joining mask {} and {}.'.format(repr_imgs(firstimg), repr_imgs(volf))) from exc
     else:
         return as_ndarray(mask > 0, dtype=bool)
 
@@ -199,20 +191,15 @@ def apply_mask(image, mask_img):
     ------
     NiftiFilesNotCompatible, ValueError
     """
-    try:
-        img  = check_img(image)
-        mask = check_img(mask_img)
-        check_img_compatibility(img, mask)
-    except:
-        raise
+    img  = check_img(image)
+    mask = check_img(mask_img)
+    check_img_compatibility(img, mask)
 
     try:
         vol          = img.get_data()
         mask_data, _ = load_mask_data(mask)
-    except:
-        msg = 'Error applying mask {} to {}.'.format(repr_imgs(mask_img), repr_imgs(img))
-        log.exception(msg)
-        raise ValueError(msg)
+    except Exception as exc:
+        raise ValueError('Error applying mask {} to {}.'.format(repr_imgs(mask_img), repr_imgs(img))) from exc
     else:
         return vol[mask_data], mask_data
 
@@ -259,20 +246,15 @@ def apply_mask_4d(image, mask_img): # , smooth_mm=None, remove_nans=True):
     ------
     FileNotFound, NiftiFilesNotCompatible
     """
-    try:
-        img  = check_img(image)
-        mask = check_img(mask_img)
-        check_img_compatibility(img, mask, only_check_3d=True)
-    except:
-        raise
+    img  = check_img(image)
+    mask = check_img(mask_img)
+    check_img_compatibility(img, mask, only_check_3d=True)
 
     try:
         vol = get_data(img)
         series, mask_data = _apply_mask_to_4d_data(vol, mask)
-    except:
-        msg = 'Error applying mask {} to {}.'.format(repr_imgs(image), repr_imgs(mask_img))
-        log.exception(msg)
-        raise ValueError(msg)
+    except Exception as exc:
+        raise ValueError('Error applying mask {} to {}.'.format(repr_imgs(image), repr_imgs(mask_img))) from exc
     else:
         return series, mask_data
 
@@ -298,13 +280,7 @@ def _apply_mask_to_4d_data(vol_data, mask_img):
     ----
     vol_data and mask_file must have the same shape.
     """
-    try:
-        mask_data, _ = load_mask_data(mask_img)
-        data         = vol_data[mask_data]
-    except:
-        raise
-    else:
-        return data, mask_data
+    return vol_data[mask_data], load_mask_data(mask_img)
 
 
 def vector_to_volume(arr, mask, order='C'):
@@ -442,8 +418,7 @@ def niftilist_mask_to_array(img_filelist, mask_file=None, outdtype=None):
 
             vol = get_img_data(img)
             outmat[i, :] = vol[indices]
-    except Exception:
-        log.exception('Error when reading file {0}.'.format(repr_imgs(img)))
-        raise
+    except Exception as exc:
+        raise Exception('Error when reading file {0}.'.format(repr_imgs(img))) from exc
     else:
         return outmat, mask_data

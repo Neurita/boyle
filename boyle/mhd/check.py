@@ -62,6 +62,7 @@ def check_mhd_img(image, make_it_3d=False):
             log.exception('Error loading image file {}.'.format(image))
             raise
         else:
+            # TODO: add hdr as metadata to the img volume
             return img
 
     elif is_img(image):

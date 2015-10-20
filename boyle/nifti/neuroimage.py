@@ -60,9 +60,9 @@ class NiftiImage(object):
     >>> %memit ni(fpath).get_data()
     """
     def __init__(self, image, make_it_3d=False, cache_data=True):
-        self.img         = check_img(image, make_it_3d=make_it_3d)
-        self._caching    = 'fill' if cache_data else 'unchanged'
-        self.mask        = None
+        self.img      = check_img(image, make_it_3d=make_it_3d)
+        self._caching = 'fill' if cache_data else 'unchanged'
+        self.mask     = None
         self.zeroe()
 
     def zeroe(self):
@@ -364,4 +364,3 @@ class NiftiImage(object):
 class NeuroImage(NiftiImage):
     def __repr__(self):
         return '<NeuroImage> ' + repr_imgs(self.img)
-

@@ -19,6 +19,7 @@ from   .files.names         import get_extension
 
 from   .nifti.neuroimage    import NiftiImage
 from   .mhd.read            import load_raw_data_with_mhd, check_mhd_img
+from   .mha.read            import
 
 from   .nifti.check         import check_img, check_img_compatibility, repr_imgs
 from   .mask                import load_mask, _apply_mask_to_4d_data, vector_to_volume, matrix_to_4dvolume
@@ -49,37 +50,121 @@ def open_volume_file(filepath):
     IOError
         In case the file is not found.
     """
+    # check if the file exists
+    if not op.exists(filepath):
+        raise IOError('Could not find file {}.'.format(filepath))
+
+    # define helper functions
     def open_nifti_file(filepath):
         return NiftiImage(filepath)
 
     def open_mhd_file(filepath):
         return MedicalImage(filepath)
         vol_data, hdr_data = load_raw_data_with_mhd(filepath)
-        pixdim = hdr_data['ElementSpacing']
+        # TODO: convert vol_data and hdr_data into MedicalImage
         return vol_data, hdr_data
 
-    if not op.exists(filepath):
-        raise IOError('Could not find file {}.'.format(filepath))
+    def open_mha_file(filepath):
 
+
+    # generic loader function
+    def _load_file(filepath, loader):
+        try:
+            img = loader(filepath)
+        except Exception as ex:
+            raise IOError('Could not read {}.'.format(filepath)) from ex
+        else:
+            return img
+
+    # file_extension -> file loader function
+    filext_loader = {
+                    'nii': open_nifti_file,
+                    'mhd': open_mhd_file,
+                    'mha': open_mha_file,
+                    }
+
+    # get extension of the `filepath`
     ext = get_extension(filepath)
-    if 'nii' in ext:
-        try:
-            return open_nifti_file(filepath)
-        except:
-            log.exception('Could not read {}.'.format(filepath))
-            raise
 
-    if 'mhd' in ext:
-        try:
-            return open_mhd_file(filepath)
-        except:
-            log.exception('Could not read {}.'.format(filepath))
-            raise
+    # find the loader from `ext`
+    loader = None
+    for e in filext_loader:
+        if ext in e:
+            loader = filext_loader[e]
 
+    if loader is None:
+        raise ValueError('Could not find a loader for file {}.'.format(filepath))
+
+    return _load_file(filepath, loader)
+
+
+def _check_medimg(image, make_it_3d=make_it_3d):
+    """Check that image is a proper img. Turn filenames into objects.
+
+    Parameters
+    ----------
+    image: img-like object or str
+        Can either be:
+        - a file path to a medical image file, e.g. NifTI, .mhd/raw, .mha
+        - any object with get_data() and get_affine() methods, e.g., nibabel.Nifti1Image.
+        If niimg is a string, consider it as a path to Nifti image and
+        call nibabel.load on it. If it is an object, check if get_data()
+        and get_affine() methods are present, raise TypeError otherwise.
+
+    make_it_3d: boolean, optional
+        If True, check if the image is a 3D image and raise an error if not.
+
+    Returns
+    -------
+    result: nifti-like
+       result can be nibabel.Nifti1Image or the input, as-is. It is guaranteed
+       that the returned object has get_data() and get_affine() methods.
+    """
+    if isinstance(image, string_types):
+        # a filename, load it
+        if not op.exists(image):
+            raise FileNotFound(image)
+
+        try:
+            img = open_volume_file(image)
+        except Exception as ex:
+            raise IOError('Error loading image file {}.'.format(image)) from ex
+        else:
+            if make_it_3d:
+                img = _make_it_3d(img)
+            return img
+
+    elif isinstance(image, nib.Nifti1Image) or is_img(image):
+        return image
+
+    else:
+        raise TypeError('Data given cannot be converted to a medical image'
+                        ' image: this object -"{}"- does not have'
+                        ' get_data or get_affine methods'.format(type(image)))
+
+# TODO
+class ImageContainer(object):
+    """ A image data container with a `data` and generic `meta_data`.
+
+    Parameters
+    ----------
+    data: numpy.array
+
+    meta_data
+    """
+    def __init__(self, data, meta_data):
+        self._setup(data, meta_data)
+
+    def _setup(self, data, meta_data):
+        raise NotImplementedError('This is under development')
 
 class MedicalImage(object):
     """MedImage is a class that wraps around different formats of medical images (Nifti, RAW, for now)
      offering compatibility with other external tools.
+
+    Note
+    ----
+    This is under development and probably won't work. Use the helper functions and NiftiImage for now.
 
     Parameters
     ----------
@@ -102,9 +187,9 @@ class MedicalImage(object):
        that the returned object has get_data() and get_affine() methods.
     """
     def __init__(self, image, make_it_3d=False, cache_data=True):
-        self.img         = check_mhd_img(image, make_it_3d=make_it_3d)
-        self._caching    = 'fill' if cache_data else 'unchanged'
-        self.mask        = None
+        self.img      = _check_medimg(image, make_it_3d=make_it_3d)
+        self._caching = 'fill' if cache_data else 'unchanged'
+        self.mask     = None
         self.zeroe()
 
     def zeroe(self):

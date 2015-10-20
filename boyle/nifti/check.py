@@ -198,14 +198,10 @@ def have_same_affine(one_img, another_img, only_check_3d=False):
     ndim2 = len(img2.shape)
 
     if ndim1 < 3:
-        msg = 'Image {} has only {} dimensions, at least 3 dimensions is expected.'.format(repr_imgs(img1), ndim1)
-        log.exception(msg)
-        raise ValueError(msg)
+        raise ValueError('Image {} has only {} dimensions, at least 3 dimensions is expected.'.format(repr_imgs(img1), ndim1))
 
     if ndim2 < 3:
-        msg = 'Image {} has only {} dimensions, at least 3 dimensions is expected.'.format(repr_imgs(img2), ndim1)
-        log.exception(msg)
-        raise ValueError(msg)
+        raise ValueError('Image {} has only {} dimensions, at least 3 dimensions is expected.'.format(repr_imgs(img2), ndim1))
 
     affine1 = img1.get_affine()
     affine2 = img2.get_affine()
@@ -239,11 +235,16 @@ def _make_it_3d(img):
 
     elif (len(shape) == 4 and shape[3] == 1):
         # "squeeze" the image.
-        data   = get_data(img)
-        affine = img.get_affine()
-        return nib.Nifti1Image(data[:, :, :, 0], affine)
+        try:
+            data   = get_data(img)
+            affine = img.get_affine()
+            img    = nib.Nifti1Image(data[:, :, :, 0], affine)
+        except Exception as exc:
+            raise Exception("Error making image '{}' a 3D volume file.".format(img)) from exc
+        else:
+            return img
     else:
-        raise TypeError('A 3D image is expected, but an image with a shape of {} was given.'.format(shape))
+        raise TypeError("A 3D image is expected, but an image with a shape of {} was given.".format(shape))
 
 
 def check_img(image, make_it_3d=False):
@@ -277,9 +278,8 @@ def check_img(image, make_it_3d=False):
             img = nib.load(image)
             if make_it_3d:
                 img = _make_it_3d(img)
-        except:
-            log.exception('Error loading image file {}.'.format(image))
-            raise
+        except Exception as exc:
+            raise Exception('Error loading image file {}.'.format(image)) from exc
         else:
             return img
 
@@ -304,14 +304,16 @@ def repr_imgs(imgs):
     try:
         filename = imgs.get_filename()
         if filename is not None:
-            return "{}('{}')".format(imgs.__class__.__name__, filename)
+            img_str = "{}('{}')".format(imgs.__class__.__name__, filename)
         else:
-            return "{}(shape={}, affine={})".format(imgs.__class__.__name__,
-                                                    repr(get_shape(imgs)),
-                                                    repr(imgs.get_affine()))
-    except:
-        pass
-    return repr(imgs)
+            img_str = "{}(shape={}, affine={})".format(imgs.__class__.__name__,
+                                                       repr(get_shape(imgs)),
+                                                       repr(imgs.get_affine()))
+    except Exception as exc:
+        log.error('Error reading attributes from img.get_filename()')
+        return repr(imgs)
+    else:
+        return img_str
 
 
 def repr_img(img):
@@ -345,7 +347,6 @@ def have_same_shape(array1, array2, nd_to_check=None):
         elif len(shape2) < nd_to_check:
             msg = 'Number of dimensions to check {} is out of bounds for the shape of the second image: \n{}\n.'.format(shape2)
             raise ValueError(msg)
-
 
         shape1 = shape1[:nd_to_check]
         shape2 = shape2[:nd_to_check]
@@ -391,9 +392,7 @@ def check_have_same_geometry(fname1, fname2):
     @param fname2:
     """
     if not have_same_geometry(fname1, fname2):
-        err = 'Different shapes:' + fname1 + ' vs. ' + fname2
-        log.error(err)
-        raise ArithmeticError(err)
+        raise ArithmeticError('Different shapes:' + fname1 + ' vs. ' + fname2)
 
 
 def check_have_same_spatial_geometry(fname1, fname2):
@@ -402,9 +401,7 @@ def check_have_same_spatial_geometry(fname1, fname2):
     @param fname2:
     """
     if not have_same_spatial_geometry(fname1, fname2):
-        err = 'Different shapes:' + fname1 + ' vs. ' + fname2
-        log.error(err)
-        raise ArithmeticError(err)
+        raise ArithmeticError('Different shapes:' + fname1 + ' vs. ' + fname2)
 
 
 def get_sampling_interval(func_img):

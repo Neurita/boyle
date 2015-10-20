@@ -97,7 +97,7 @@ def add_meta_to_nii(nii_file, dicom_file, dcm_tags=''):
     nibabel.save(image, nii_file)
 
 
-def dcm2nii(work_dir, arguments=''):
+def call_dcm2nii(work_dir, arguments=''):
     """Converts all DICOM files within `work_dir` into one or more
     NifTi files by calling dcm2nii on this folder.
 
@@ -117,7 +117,7 @@ def dcm2nii(work_dir, arguments=''):
     if not op.exists(work_dir):
         raise IOError('Folder {} not found.'.format(work_dir))
 
-    cmd_line = 'dcm2nii {0} {1}'.format(arguments, work_dir)
+    cmd_line = 'dcm2nii {0} "{1}"'.format(arguments, work_dir)
     log.info(cmd_line)
     try:
         out = subprocess.call(cmd_line, shell=True)

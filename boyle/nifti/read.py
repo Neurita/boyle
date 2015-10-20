@@ -79,9 +79,8 @@ def get_img_info(image):
     """
     try:
         img = check_img(image)
-    except Exception:
-        log.exception('Error reading file {0}.'.format(repr_imgs(image)))
-        raise
+    except Exception as exc:
+        raise Exception('Error reading file {0}.'.format(repr_imgs(image))) from exc
     else:
         return img.get_header(), img.get_affine()
 
@@ -113,9 +112,8 @@ def get_img_data(image, copy=True):
             return get_data(img)
         else:
             return img.get_data()
-    except Exception:
-        log.exception('Error when reading file {0}.'.format(repr_imgs(image)))
-        raise
+    except Exception as exc:
+        raise Exception('Error when reading file {0}.'.format(repr_imgs(image))) from exc
 
 
 def load_nipy_img(nii_file):
@@ -138,9 +136,8 @@ def load_nipy_img(nii_file):
 
     try:
         return nipy.load_image(nii_file)
-    except Exception:
-        log.exception('Reading file {0}.'.format(repr_imgs(nii_file)))
-        raise
+    except Exception as exc:
+        raise Exception('Reading file {0}.'.format(repr_imgs(nii_file))) from exc
 
 
 def niftilist_to_array(img_filelist, outdtype=None):
@@ -175,9 +172,8 @@ def niftilist_to_array(img_filelist, outdtype=None):
     try:
         first_img = img_filelist[0]
         vol       = get_img_data(first_img)
-    except IndexError:
-        log.exception('Error getting the first item of img_filelis: {}'.format(repr_imgs(img_filelist[0])))
-        raise
+    except IndexError as ie:
+        raise Exception('Error getting the first item of img_filelis: {}'.format(repr_imgs(img_filelist[0]))) from ie
 
     if not outdtype:
         outdtype = vol.dtype
@@ -188,9 +184,8 @@ def niftilist_to_array(img_filelist, outdtype=None):
         for i, img_file in enumerate(img_filelist):
             vol = get_img_data(img_file)
             outmat[i, :] = vol.flatten()
-    except:
-        log.exception('Error on reading file {0}.'.format(img_file))
-        raise
+    except Exception as exc:
+        raise Exception('Error on reading file {0}.'.format(img_file)) from exc
 
     return outmat, vol.shape
 

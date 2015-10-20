@@ -95,8 +95,7 @@ def create_rois_mask(roislist, filelist):
         try:
             roifiles.append(search_list(roi, filelist)[0])
         except Exception as exc:
-            log.error(exc)
-            raise
+            raise Exception('Error creating list of roi files.') from exc
 
     return binarise(roifiles)
 
@@ -235,9 +234,8 @@ def partition_timeseries(image, roi_img, mask_img, zeroe=True, roi_values=None, 
     mask = load_mask(mask_img)
     try:
         check_img_compatibility(img, mask, only_check_3d=True)
-    except:
-        log.error('Given image and mask image are not compatible.')
-        raise
+    except Exception as exc:
+        raise Exception('Given image and mask image are not compatible.') from exc
 
     # choose function to call
     if outdict:
