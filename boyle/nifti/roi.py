@@ -443,3 +443,8 @@ def get_3D_from_4D(image, vol_idx=0):
     hdr.set_data_shape(hdr.get_data_shape()[:3])
 
     return new_vol, hdr, aff
+
+
+def partition_volume(*args, **kwargs):
+    """ Look at partition_timeseries function docstring. """
+    return partition_timeseries(*args, **kwargs)
