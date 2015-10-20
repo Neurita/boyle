@@ -172,6 +172,9 @@ def get_rois_centers_of_mass(vol):
     return rois_centers
 
 
+# def partition_volume(image, roi_img, mask_img=None, zeroe=True, roi_values=None, outdict=False):
+
+
 def partition_timeseries(image, roi_img, mask_img, zeroe=True, roi_values=None, outdict=False):
     """Partition the timeseries in tsvol according to the ROIs in roivol.
     If a mask is given, will use it to exclude any voxel outside of it.
@@ -249,6 +252,67 @@ def partition_timeseries(image, roi_img, mask_img, zeroe=True, roi_values=None, 
         raise
 
 
+def _check_for_partition(tsvol, roivol, maskvol=None):
+    #if tsvol.ndim != 4:
+    #    raise ValueError('Expected a timeseries volume with 4 dimensions. tsvol has {} dimensions.'.format(tsvol.ndim))
+
+    if tsvol.shape[:3] != roivol.shape:
+        raise ValueError('Expected a ROI volume with the same 3D shape as the timeseries volume. '
+                         'In this case, tsvol has shape {} and roivol {}.'.format(tsvol.shape, roivol.shape))
+
+    if maskvol is not None:
+        if tsvol.shape[:3] != maskvol.shape:
+            raise ValueError('Expected a mask volume with the same 3D shape as the timeseries volume. '
+                             'In this case, tsvol has shape {} and maskvol {}.'.format(tsvol.shape, maskvol.shape))
+
+
+def _partition_data(datavol, roivol, roivalue, maskvol=None, zeroe=True):
+    """ Extracts the values in `datavol` that are in the ROI with value `roivalue` in `roivol`.
+    The ROI can be masked by `maskvol`.
+
+    Parameters
+    ----------
+    datavol: numpy.ndarray
+        4D timeseries volume or a 3D volume to be partitioned
+
+    roivol: numpy.ndarray
+        3D ROIs volume
+
+    roivalue: int or float
+        A value from roivol that represents the ROI to be used for extraction.
+
+    maskvol: numpy.ndarray
+        3D mask volume
+
+    zeroe: bool
+        If true will remove the null timeseries voxels.  Only applied to timeseries (4D) data.
+
+    Returns
+    -------
+    values: np.array
+        An array of the values in the indicated ROI.
+        A 2D matrix if `datavol` is 4D or a 1D vector if `datavol` is 3D.
+    """
+    if maskvol is None:
+        # get all masked time series within this roi r
+        indices = (roivol == roivalue) * (maskvol > 0)
+    else:
+        # get all time series within this roi r
+        indices = roivol == roivalue
+
+    if tsvol.ndim == 4:
+        ts = datavol[indices, :]
+    else:
+        ts = datavol[indices]
+
+    # remove zeroed time series
+    if zeroe:
+        if datavol.ndim == 4:
+            ts = ts[ts.sum(axis=1) != 0, :]
+
+    return ts
+
+
 def _extract_timeseries_dict(tsvol, roivol, maskvol=None, roi_values=None, zeroe=True):
     """Partition the timeseries in tsvol according to the ROIs in roivol.
     If a mask is given, will use it to exclude any voxel outside of it.
@@ -256,7 +320,7 @@ def _extract_timeseries_dict(tsvol, roivol, maskvol=None, roi_values=None, zeroe
     Parameters
     ----------
     tsvol: numpy.ndarray
-        4D timeseries volume
+        4D timeseries volume or a 3D volume to be partitioned
 
     roivol: numpy.ndarray
         3D ROIs volume
@@ -276,33 +340,15 @@ def _extract_timeseries_dict(tsvol, roivol, maskvol=None, roi_values=None, zeroe
     ts_dict: OrderedDict
         A dict with the timeseries as items and keys as the ROIs voxel values.
     """
-    if tsvol.ndim != 4:
-        raise ValueError('Expected a timeseries volume with 4 dimensions. tsvol has {} dimensions.'.format(tsvol.ndim))
+    _check_for_partition(tsvol, roivol, maskvol)
 
-    if tsvol.shape[:3] != roivol.shape:
-        raise ValueError('Expected a ROI volume with the same 3D shape as the timeseries volume. '
-                         'In this case, tsvol has shape {} and roivol {}.'.format(tsvol.shape, roivol.shape))
-
-    if maskvol is not None:
-        if tsvol.shape[:3] != maskvol.shape:
-            raise ValueError('Expected a mask volume with the same 3D shape as the timeseries volume. '
-                             'In this case, tsvol has shape {} and maskvol {}.'.format(tsvol.shape, maskvol.shape))
-
+    # get unique values of the atlas
     if roi_values is None:
         roi_values = get_unique_nonzeros(roivol)
 
     ts_dict = OrderedDict()
     for r in roi_values:
-        if maskvol is not None:
-            # get all masked time series within this roi r
-            ts = tsvol[(roivol == r) * (maskvol > 0), :]
-        else:
-            # get all time series within this roi r
-            ts = tsvol[roivol == r, :]
-
-        # remove zeroed time series
-        if zeroe:
-            ts = ts[ts.sum(axis=1) != 0, :]
+        ts = _partition_data(tsvol, roivol, r, maskvol, zeroe)
 
         if len(ts) == 0:
             ts = np.zeros(tsvol.zeros(tsvol.shape[-1]))
@@ -319,7 +365,7 @@ def _extract_timeseries_list(tsvol, roivol, maskvol=None, roi_values=None, zeroe
     Parameters
     ----------
     tsvol: numpy.ndarray
-        4D timeseries volume
+        4D timeseries volume or a 3D volume to be partitioned
 
     roivol: numpy.ndarray
         3D ROIs volume
@@ -328,7 +374,7 @@ def _extract_timeseries_list(tsvol, roivol, maskvol=None, roi_values=None, zeroe
         3D mask volume
 
     zeroe: bool
-        If true will remove the null timeseries voxels.
+        If true will remove the null timeseries voxels. Only applied to timeseries (4D) data.
 
     roi_values: list of ROI values (int?)
         List of the values of the ROIs to indicate the
@@ -339,33 +385,14 @@ def _extract_timeseries_list(tsvol, roivol, maskvol=None, roi_values=None, zeroe
     ts_list: list
         A list with the timeseries arrays as items
     """
-    if tsvol.ndim != 4:
-        raise ValueError('Expected a timeseries volume with 4 dimensions. tsvol has {} dimensions.'.format(tsvol.ndim))
-
-    if tsvol.shape[:3] != roivol.shape:
-        raise ValueError('Expected a ROI volume with the same 3D shape as the timeseries volume. '
-                         'In this case, tsvol has shape {} and roivol {}.'.format(tsvol.shape, roivol.shape))
-
-    if maskvol is not None:
-        if tsvol.shape[:3] != maskvol.shape:
-            raise ValueError('Expected a mask volume with the same 3D shape as the timeseries volume. '
-                             'In this case, tsvol has shape {} and maskvol {}.'.format(tsvol.shape, maskvol.shape))
+    _check_for_partition(tsvol, roivol, maskvol)
 
     if roi_values is None:
         roi_values = get_unique_nonzeros(roivol)
 
     ts_list = []
     for r in roi_values:
-        if maskvol is None:
-            # get all masked time series within this roi r
-            ts = tsvol[(roivol == r) * (maskvol > 0), :]
-        else:
-            # get all time series within this roi r
-            ts = tsvol[roivol == r, :]
-
-        # remove zeroed time series
-        if zeroe:
-            ts = ts[ts.sum(axis=1) != 0, :]
+        ts = _partition_data(tsvol, roivol, r, maskvol, zeroe)
 
         if len(ts) == 0:
             ts = np.zeros(tsvol.zeros(tsvol.shape[-1]))
