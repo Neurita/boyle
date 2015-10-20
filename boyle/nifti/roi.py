@@ -253,7 +253,7 @@ def partition_timeseries(image, roi_img, mask_img, zeroe=True, roi_values=None, 
 
 
 def _check_for_partition(tsvol, roivol, maskvol=None):
-    if tsvol.ndim != 4 or tsvol.ndim != 3:
+    if tsvol.ndim != 4 and tsvol.ndim != 3:
         raise ValueError('Expected a volume with 3 or 4 dimensions. tsvol has {} dimensions.'.format(tsvol.ndim))
 
     if tsvol.shape[:3] != roivol.shape:
