@@ -12,13 +12,14 @@ A class to manage neuroimage files. A wrapper around nibabel and nipy for own pu
 
 import gc
 import logging
-import numpy    as np
 
-from   .check   import check_img, check_img_compatibility, repr_imgs
-from   .read    import get_data
-from   .mask    import load_mask, _apply_mask_to_4d_data, vector_to_volume, matrix_to_4dvolume
-from   .smooth  import _smooth_data_array
-from   .storage import save_niigz
+import numpy as np
+
+from .check   import check_img, check_img_compatibility, repr_imgs
+from .read    import get_data
+from .mask    import load_mask, _apply_mask_to_4d_data, vector_to_volume, matrix_to_4dvolume
+from .smooth  import _smooth_data_array
+from .storage import save_niigz
 
 log = logging.getLogger(__name__)
 
