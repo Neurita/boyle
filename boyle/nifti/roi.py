@@ -252,18 +252,18 @@ def partition_timeseries(image, roi_img, mask_img, zeroe=True, roi_values=None, 
         raise
 
 
-def _check_for_partition(tsvol, roivol, maskvol=None):
-    if tsvol.ndim != 4 and tsvol.ndim != 3:
-        raise ValueError('Expected a volume with 3 or 4 dimensions. tsvol has {} dimensions.'.format(tsvol.ndim))
+def _check_for_partition(datavol, roivol, maskvol=None):
+    if datavol.ndim != 4 and datavol.ndim != 3:
+        raise ValueError('Expected a volume with 3 or 4 dimensions. datavol has {} dimensions.'.format(datavol.ndim))
 
-    if tsvol.shape[:3] != roivol.shape:
+    if datavol.shape[:3] != roivol.shape:
         raise ValueError('Expected a ROI volume with the same 3D shape as the timeseries volume. '
-                         'In this case, tsvol has shape {} and roivol {}.'.format(tsvol.shape, roivol.shape))
+                         'In this case, datavol has shape {} and roivol {}.'.format(datavol.shape, roivol.shape))
 
     if maskvol is not None:
-        if tsvol.shape[:3] != maskvol.shape:
+        if datavol.shape[:3] != maskvol.shape:
             raise ValueError('Expected a mask volume with the same 3D shape as the timeseries volume. '
-                             'In this case, tsvol has shape {} and maskvol {}.'.format(tsvol.shape, maskvol.shape))
+                             'In this case, datavol has shape {} and maskvol {}.'.format(datavol.shape, maskvol.shape))
 
 
 def _partition_data(datavol, roivol, roivalue, maskvol=None, zeroe=True):
@@ -300,7 +300,7 @@ def _partition_data(datavol, roivol, roivalue, maskvol=None, zeroe=True):
         # get all time series within this roi r
         indices = roivol == roivalue
 
-    if tsvol.ndim == 4:
+    if datavol.ndim == 4:
         ts = datavol[indices, :]
     else:
         ts = datavol[indices]
