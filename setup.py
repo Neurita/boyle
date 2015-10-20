@@ -56,7 +56,7 @@ setup_dict = dict(
 
     packages=find_packages(),
 
-    setup_requires=['numpy'],
+    setup_requires=['numpy', 'scipy', 'nibabel', 'pydicom'],
 
     install_requires=get_requirements(*req_files),
 
