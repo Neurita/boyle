@@ -14,7 +14,7 @@ import os.path as op
 import logging
 import subprocess
 
-import dicom
+import pydicom as dicom
 import nibabel
 import numpy
 

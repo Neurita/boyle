@@ -12,9 +12,9 @@ Utilities for Dicom file management.
 import os
 import os.path as op
 import logging
-
-import dicom
 from   collections   import defaultdict
+
+import pydicom as dicom
 from   dicom.dataset import FileDataset
 
 from ..files.search import get_all_files
