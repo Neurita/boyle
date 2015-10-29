@@ -12,10 +12,11 @@ Utilities for Dicom file management.
 import os
 import os.path as op
 import logging
+import subprocess
 from   collections   import defaultdict
 
 import pydicom as dicom
-from   dicom.dataset import FileDataset
+from   pydicom.dataset import FileDataset
 
 from ..commands import call_command
 from ..files.search import get_all_files, recursive_glob
@@ -224,12 +225,11 @@ def decompress(input_dir, dcm_pattern='*.dcm'):
     -----
     The *.dcm files in `input_folder` will be overwritten.
     """
-    dcmfiles = recursive_glob(input_dir, dcm_pattern)
+    dcmfiles = sorted(recursive_glob(input_dir, dcm_pattern))
     for dcm in dcmfiles:
         cmd = 'gdcmconv --raw -i "{0}" -o "{0}"'.format(dcm)
         log.debug('Calling {}.'.format(cmd))
-        call_command(cmd)
-
+        subprocess.check_call(cmd, shell=True)
 
 
 if __name__ == '__main__':

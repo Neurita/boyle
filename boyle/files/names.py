@@ -38,6 +38,12 @@ def get_files(folderpath):
             os.walk(folderpath) for f in filenames]
 
 
+def make_dir(dirpath):
+    """ Call os.mkdir only if `dirpath` does not exist."""
+    if not op.exists(dirpath):
+        os.mkdir(dirpath)
+
+
 def get_extension(filepath, check_if_exists=False, allowed_exts=ALLOWED_EXTS):
     """Return the extension of fpath.
 

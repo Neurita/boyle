@@ -18,6 +18,9 @@ import pydicom as dicom
 import nibabel
 import numpy
 
+from   ..files.utils import copy_w_ext, copy_w_plus
+from   ..files.names import remove_ext
+
 
 log = logging.getLogger(__name__)
 
@@ -125,3 +128,106 @@ def call_dcm2nii(work_dir, arguments=''):
         raise IOError('Error calling `{}`'.format(cmd_line)) from exc
     else:
         return out
+
+
+def convert_dcm2nii(input_dir, output_dir, filename):
+    """ Call MRICron's `dcm2nii` to convert the DICOM files inside `input_dir`
+    to Nifti and save the Nifti file in `output_dir` with a `filename` prefix.
+
+    Parameters
+    ----------
+    input_dir: str
+        Path to the folder that contains the DICOM files
+
+    output_dir: str
+        Path to the folder where to save the NifTI file
+
+    filename: str
+        Output file basename
+
+    Returns
+    -------
+    filepaths: list of str
+        List of file paths created in `output_dir`.
+    """
+    # a few checks before doing the job
+    if not op.exists(input_dir):
+        raise IOError('Expected an existing folder in {}.'.format(input_dir))
+
+    if not op.exists(output_dir):
+        raise IOError('Expected an existing output folder in {}.'.format(output_dir))
+
+
+    # create a temporary folder for dcm2nii export
+    tmpdir = tempfile.TemporaryDirectory(prefix='dcm2nii_')
+
+    # call dcm2nii
+    arguments = '-o "{}" -i y'.format(tmpdir.name)
+    try:
+        call_out = call_dcm2nii(input_dir, arguments)
+    except:
+        raise
+    else:
+        log.info('Converted "{}" to nifti.'.format(input_dir))
+
+        # get the filenames of the files that dcm2nii produced
+        filenames  = glob(op.join(tmpdir.name, '*.nii*'))
+
+        # cleanup `filenames`, using only the post-processed (reoriented, cropped, etc.) images by dcm2nii
+        cleaned_filenames = remove_dcm2nii_underprocessed(filenames)
+
+        # copy files to the output_dir
+        filepaths = []
+        for srcpath in cleaned_filenames:
+            dstpath = op.join(output_dir, filename)
+            realpath = copy_w_plus(srcpath, dstpath)
+            filepaths.append(realpath)
+
+            # copy any other file produced by dcm2nii that is not a NifTI file, e.g., *.bvals...
+            basename = op.basename(remove_ext(srcpath))
+            aux_files = set(glob(op.join(tmpdir.name, '{}.*'     .format(basename)))) - \
+                        set(glob(op.join(tmpdir.name, '{}.nii*'.format(basename))))
+            for aux_file in aux_files:
+                aux_dstpath = copy_w_ext(aux_file, output_dir, remove_ext(op.basename(realpath)))
+                filepaths.append(aux_dstpath)
+
+        return filepaths
+
+
+def remove_dcm2nii_underprocessed(filepaths):
+    """ Return a subset of `filepaths`. Keep only the files that have a basename longer than the
+    others with same suffix.
+    This works based on that dcm2nii appends a preffix character for each processing
+    step it does automatically in the DICOM to NifTI conversion.
+
+    Parameters
+    ----------
+    filepaths: iterable of str
+
+    Returns
+    -------
+    cleaned_paths: iterable of str
+    """
+    cln_flist = []
+
+    # sort them by size
+    len_sorted = sorted(filepaths, key=len)
+
+    for idx, fpath in enumerate(len_sorted):
+        remove = False
+
+        # get the basename and the rest of the files
+        fname = op.basename(fpath)
+        rest  = len_sorted[idx+1:]
+
+        # check if the basename is in the basename of the rest of the files
+        for rest_fpath in rest:
+            rest_file = op.basename(rest_fpath)
+            if rest_file.endswith(fname):
+                remove = True
+                break
+
+        if not remove:
+            cln_flist.append(fpath)
+
+    return cln_flist
