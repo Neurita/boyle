@@ -54,6 +54,7 @@ def which_py2(program):
 
     return None
 
+
 def whoami():
     """Get the name of the current function"""
     return inspect.stack()[1][3]
@@ -96,7 +97,7 @@ def call_command(cmd_name, args_strings):
     cmd_name: str
         Command name or full path to the binary file.
 
-    arg_strings: str
+    arg_strings: list of str
         Argument strings list.
 
     Returns

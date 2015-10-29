@@ -17,7 +17,9 @@ from   collections   import defaultdict
 import pydicom as dicom
 from   dicom.dataset import FileDataset
 
-from ..files.search import get_all_files
+from ..commands import call_command
+from ..files.search import get_all_files, recursive_glob
+
 
 log = logging.getLogger(__name__)
 
@@ -62,8 +64,7 @@ class DicomFile(FileDataset):
             self.file_path = op.abspath(file_path)
 
         except Exception as exc:
-            log.exception('Error reading file {0}.'.format(file_path))
-            raise
+            raise Exception('Error reading file {0}.'.format(file_path)) from exc
 
     def get_attributes(self, attributes, default=''):
         """Return the attributes values from this DicomFile
@@ -116,9 +117,8 @@ def get_unique_field_values(dcm_file_list, field_name):
         for dcm in dcm_file_list:
             field_values.add(str(DicomFile(dcm).get_attributes(field_name)))
         return field_values
-    except Exception:
-        log.exception('Error reading file {}'.format(dcm))
-        raise
+    except Exception as exc:
+        raise Exception('Error reading file {}'.format(dcm)) from exc
 
 
 def find_all_dicom_files(root_path):
@@ -142,7 +142,7 @@ def find_all_dicom_files(root_path):
             if is_dicom_file(fpath):
                 dicoms.add(fpath)
     except Exception as exc:
-        log.exceptions('Error reading file {0}.'.format(fpath))
+        raise Exception('Error reading file {0}.'.format(fpath)) from exc
 
     return dicoms
 
@@ -198,9 +198,38 @@ def group_dicom_files(dicom_paths, hdr_field='PatientID'):
             group_key = getattr(hdr, hdr_field)
             dicom_groups[group_key].append(dcm)
     except Exception as exc:
-        log.exception('Error reading file {0}.'.format(dcm))
+        raise Exception('Error reading file {0}.'.format(dcm)) from exc
 
     return dicom_groups
+
+
+def decompress(input_dir, dcm_pattern='*.dcm'):
+    """ Decompress all *.dcm files recursively found in DICOM_DIR.
+    This uses 'gdcmconv --raw'.
+    It works when 'dcm2nii' shows the `Unsupported Transfer Syntax` error. This error is
+    usually caused by lack of JPEG2000 support in dcm2nii compilation.
+
+    Read more:
+    http://www.nitrc.org/plugins/mwiki/index.php/dcm2nii:MainPage#Transfer_Syntaxes_and_Compressed_Images
+
+    Parameters
+    ----------
+    input_dir: str
+        Folder path
+
+    dcm_patther: str
+        Pattern of the DICOM file names in `input_dir`.
+
+    Notes
+    -----
+    The *.dcm files in `input_folder` will be overwritten.
+    """
+    dcmfiles = recursive_glob(input_dir, dcm_pattern)
+    for dcm in dcmfiles:
+        cmd = 'gdcmconv --raw -i "{0}" -o "{0}"'.format(dcm)
+        log.debug('Calling {}.'.format(cmd))
+        call_command(cmd)
+
 
 
 if __name__ == '__main__':
