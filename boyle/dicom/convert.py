@@ -12,7 +12,9 @@ Helper functions to convert DICOM files to other formats.
 import os
 import os.path as op
 import logging
+import tempfile
 import subprocess
+from   glob import glob
 
 import pydicom as dicom
 import nibabel
@@ -157,7 +159,6 @@ def convert_dcm2nii(input_dir, output_dir, filename):
     if not op.exists(output_dir):
         raise IOError('Expected an existing output folder in {}.'.format(output_dir))
 
-
     # create a temporary folder for dcm2nii export
     tmpdir = tempfile.TemporaryDirectory(prefix='dcm2nii_')
 
@@ -183,7 +184,7 @@ def convert_dcm2nii(input_dir, output_dir, filename):
             realpath = copy_w_plus(srcpath, dstpath)
             filepaths.append(realpath)
 
-            # copy any other file produced by dcm2nii that is not a NifTI file, e.g., *.bvals...
+            # copy any other file produced by dcm2nii that is not a NifTI file, e.g., *.bvals, *.bvecs, etc.
             basename = op.basename(remove_ext(srcpath))
             aux_files = set(glob(op.join(tmpdir.name, '{}.*'     .format(basename)))) - \
                         set(glob(op.join(tmpdir.name, '{}.nii*'.format(basename))))
