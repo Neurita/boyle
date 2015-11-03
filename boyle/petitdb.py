@@ -183,7 +183,7 @@ def _query_sample(sample, operators='__eq__'):
 
 
 def _query_data(data, field_names=None, operators='__eq__'):
-    """ Create a tinyDB Query object that looks for items that confirms the correspondent operator
+    """Create a tinyDB Query object that looks for items that confirms the correspondent operator
     from `operators` for each `field_names` field values from `data`.
 
     Parameters
@@ -216,7 +216,7 @@ def _query_data(data, field_names=None, operators='__eq__'):
 
 
 def _concat_queries(queries, operators='__and__'):
-    """ Create a tinyDB Query object that is the concatenation of each query in `queries`.
+    """Create a tinyDB Query object that is the concatenation of each query in `queries`.
     The concatenation operator is taken from `operators`.
 
     Parameters
@@ -257,7 +257,7 @@ def _concat_queries(queries, operators='__and__'):
 
 
 def _build_query(field_name, field_value, operator='__eq__'):
-    """ Create a tinyDB Query object with the format:
+    """Create a tinyDB Query object with the format:
     (where(`field_name`) `operator` `field_value`)
 
     Parameters
@@ -337,7 +337,7 @@ class PetitDB(TinyDB):
         return eid
 
     def is_unique(self, table_name, data, unique_fields=None):
-        """ Return True if an item with the value of `unique_fields`
+        """Return True if an item with the value of `unique_fields`
         from `data` is unique in the table with `table_name`.
         False if no sample is found or more than one is found.
 
@@ -364,6 +364,35 @@ class PetitDB(TinyDB):
         else:
             return eid is not None
 
+    def update_unique(self, table_name, fields, data, cond=None, unique_fields=None):
+        """Update the unique matching element to have a given set of fields.
+
+        Parameters
+        ----------
+        table_name: str
+
+        fields: dict or function[dict -> None]
+            the fields that the matching element will have
+            or a method that will update the elements.
+
+        data: dict
+
+        cond: tinydb.Query
+            which elements to update
+
+        unique_fields: list of str
+
+        Returns
+        -------
+        eid: int
+            The eid of the updated element, if found, None otherwise.
+        """
+        eid = find_unique(self.table(table_name), data, unique_fields)
+        if eid:
+            self.table(table_name).update(fields, cond=cond, eids=[eid])
+
+        return eid
+
     def count(self, table_name, sample):
         """Return the number of items that match the `sample` field values
         in table `table_name`.
@@ -371,5 +400,4 @@ class PetitDB(TinyDB):
         """
         return len(search_sample(table=self.table(table_name),
                                  sample=sample))
-
 

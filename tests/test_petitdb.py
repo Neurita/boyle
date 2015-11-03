@@ -123,3 +123,22 @@ def test_petitdb_isunique(testdb):
     assert(not testdb.is_unique('doubles', sample))
 
     assert(testdb.is_unique('uniques', sample))
+
+
+def test_petitdb_update(testdb):
+    sample = {'x': 1, 'y': 11}
+    nufields = {'z': 100}
+
+    eid = find_unique(testdb.table('uniques'), sample)
+
+    nueid = testdb.update_unique('uniques', fields=nufields, data=sample)
+    assert(eid == nueid)
+
+    nuitem = testdb.table('uniques').get(eid=nueid)
+    assert('z' in nuitem)
+
+    pytest.raises(MoreThanOneItemError,
+                  testdb.update_unique,
+                  table_name='doubles',
+                  data=sample,
+                  fields=nufields)
