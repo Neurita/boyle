@@ -125,7 +125,7 @@ def test_petitdb_isunique(testdb):
     assert(testdb.is_unique('uniques', sample))
 
 
-def test_petitdb_update(testdb):
+def test_petitdb_update_unique(testdb):
     sample = {'x': 1, 'y': 11}
     nufields = {'z': 100}
 
