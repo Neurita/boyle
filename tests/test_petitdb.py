@@ -94,6 +94,9 @@ def test_insert_unique(testdb):
     item = insert_unique(dbls, {'x': 1, 'y': 21})
     assert(isinstance(item, int))
 
+    item = insert_unique(dbls, {'x': 1, 'y': 11}, raise_if_found=False)
+    assert(isinstance(item, int))
+
 
 def test_find_sample(testdb):
 
