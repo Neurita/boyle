@@ -43,7 +43,7 @@ def insert_unique(table, data, unique_fields=None, *, raise_if_found=False):
 
     Parameters
     ----------
-    table: tinydb.table
+    table: tinydb.Table
 
     data: dict
 
@@ -75,7 +75,7 @@ def insert_unique(table, data, unique_fields=None, *, raise_if_found=False):
             raise NotUniqueItemError('Not expected to find an item with the same '
                                      'values for {}.'.format(unique_fields))
         else:
-            return item.eid
+            return item
 
     return table.insert(data)
 
