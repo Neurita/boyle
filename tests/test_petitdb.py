@@ -94,7 +94,7 @@ def test_insert_unique(testdb):
     item = insert_unique(dbls, {'x': 1, 'y': 21})
     assert(isinstance(item, int))
 
-    item = insert_unique(dbls, {'x': 1, 'y': 11}, raise_if_found=False)
+    item = insert_unique(uniqs, {'x': 1, 'y': 11}, raise_if_found=False)
     assert(isinstance(item, int))
 
 
