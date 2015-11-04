@@ -142,3 +142,15 @@ def test_petitdb_update_unique(testdb):
                   table_name='doubles',
                   data=sample,
                   fields=nufields)
+
+
+def test_petitdb_search_by_eid(testdb):
+
+    elem = testdb.search_by_eid('uniques', eid=1)
+    assert(elem.eid == 1)
+    assert(isinstance(elem, dict))
+
+    pytest.raises(KeyError,
+                  testdb.search_by_eid,
+                  table_name='uniques',
+                  eid=10000,)

@@ -294,7 +294,34 @@ class PetitDB(TinyDB):
         self._storage  = storage
         super(PetitDB, self).__init__(self._db_fpath) #, storage=self._storage)
 
-    def insert_unique(self, table_name, data, unique_fields=None):
+    def search_by_eid(self, table_name, eid):
+        """Return the element in `table_name` with Object ID `eid`.
+        If None is found will raise a KeyError exception.
+
+        Parameters
+        ----------
+        table_name: str
+            The name of the table to look in.
+
+        eid: int
+            The Object ID of the element to look for.
+
+        Returns
+        -------
+        elem: dict
+
+        Raises
+        ------
+        KeyError
+            If the element with ID `eid` is not found.
+        """
+        elem = self.table(table_name).get(eid=eid)
+        if elem is None:
+            raise KeyError('Could not find {} with eid {}.'.format(table_name, eid))
+
+        return elem
+
+    def insert_unique(self, table_name, data, unique_fields=None, *, raise_if_found=False):
         """Insert `data` into `table` ensuring that data has unique values
         in `table` for the fields listed in `unique_fields`.
 
@@ -305,7 +332,7 @@ class PetitDB(TinyDB):
 
         Parameters
         ----------
-        table: tinydb.table
+        table_name: str
 
         data: dict
 
@@ -331,10 +358,60 @@ class PetitDB(TinyDB):
             If `raise_if_found` is True and an item with the same `unique_fields`
             values from `data` is found in `table`.
         """
-        with self.table(table_name) as table:
-            eid = insert_unique(table, data, unique_fields, raise_if_found=False)
+        return insert_unique(table=self.table(table_name),
+                             data=data,
+                             unique_fields=unique_fields,
+                             raise_if_found=raise_if_found)
 
-        return eid
+    def find_unique(self, table_name, data, unique_fields=None):
+        """Search in `table` an item with the value of the `unique_fields` in the `data` sample.
+        Check if the the obtained result is unique. If nothing is found will return an empty list,
+        if there is more than one item found, will raise an IndexError.
+
+        Parameters
+        ----------
+        table_name: str
+
+        data: dict
+            Sample data
+
+        unique_fields: list of str
+            Name of fields (keys) from `data` which are going to be used to build
+            a sample to look for exactly the same values in the database.
+            If None, will use every key in `data`.
+
+        Returns
+        -------
+        eid: int
+            Id of the object found with same `unique_fields`.
+            None if none is found.
+
+        Raises
+        ------
+        MoreThanOneItemError
+            If more than one example is found.
+        """
+        return find_unique(table=self.table(table_name),
+                           data=data,
+                           unique_fields=unique_fields)
+
+    def search_sample(self, table_name, sample):
+        """Search for items in `table` that have the same field sub-set values as in `sample`.
+
+        Parameters
+        ----------
+        table_name: str
+
+        sample: dict
+            Sample data
+
+        Returns
+        -------
+        search_result: list of dict
+            List of the items found. The list is empty if no item is found.
+        """
+        return search_sample(table=self.table(table_name),
+                             sample=sample)
 
     def is_unique(self, table_name, data, unique_fields=None):
         """Return True if an item with the value of `unique_fields`
@@ -364,7 +441,8 @@ class PetitDB(TinyDB):
         else:
             return eid is not None
 
-    def update_unique(self, table_name, fields, data, cond=None, unique_fields=None):
+    def update_unique(self, table_name, fields, data, cond=None, unique_fields=None,
+                      *, raise_if_not_found=False):
         """Update the unique matching element to have a given set of fields.
 
         Parameters
@@ -382,13 +460,24 @@ class PetitDB(TinyDB):
 
         unique_fields: list of str
 
+        raise_if_not_found: bool
+            Will raise an exception if the element is not found for update.
+
         Returns
         -------
         eid: int
-            The eid of the updated element, if found, None otherwise.
+            The eid of the updated element if found, None otherwise.
         """
         eid = find_unique(self.table(table_name), data, unique_fields)
-        if eid:
+
+        if eid is None:
+            if raise_if_not_found:
+                msg  = 'Could not find {} with {}'.format(table_name, data)
+                if cond is not None:
+                    msg += ' where {}.'.format(cond)
+                raise IndexError(msg)
+
+        else:
             self.table(table_name).update(fields, cond=cond, eids=[eid])
 
         return eid
