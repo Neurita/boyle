@@ -174,7 +174,7 @@ def get_rois_centers_of_mass(vol):
 # def partition_volume(image, roi_img, mask_img=None, zeroe=True, roi_values=None, outdict=False):
 
 
-def partition_timeseries(image, roi_img, mask_img, zeroe=True, roi_values=None, outdict=False):
+def partition_timeseries(image, roi_img, mask_img=None, zeroe=True, roi_values=None, outdict=False):
     """Partition the timeseries in tsvol according to the ROIs in roivol.
     If a mask is given, will use it to exclude any voxel outside of it.
 
@@ -231,11 +231,17 @@ def partition_timeseries(image, roi_img, mask_img, zeroe=True, roi_values=None, 
         roi_values = get_unique_nonzeros(roi_data)
 
     # check if mask and image are compatible
-    mask = load_mask(mask_img)
-    try:
-        check_img_compatibility(img, mask, only_check_3d=True)
-    except Exception as exc:
-        raise Exception('Given image and mask image are not compatible.') from exc
+    if mask_img is None:
+        mask_data = None
+    else:
+        mask = load_mask(mask_img)
+        try:
+            check_img_compatibility(img, mask, only_check_3d=True)
+        except Exception as exc:
+            raise Exception('Given image and mask image are not compatible.') from exc
+        else:
+            mask_data = mask.get_data()
+
 
     # choose function to call
     if outdict:
@@ -245,7 +251,8 @@ def partition_timeseries(image, roi_img, mask_img, zeroe=True, roi_values=None, 
 
     # extract data and return it
     try:
-        return extract_data(img.get_data(), rois.get_data(), mask.get_data(), roi_values=roi_values, zeroe=zeroe)
+        return extract_data(img.get_data(), rois.get_data(), mask_data,
+                            roi_values=roi_values, zeroe=zeroe)
     except:
         raise
 
