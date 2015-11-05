@@ -298,7 +298,7 @@ def _partition_data(datavol, roivol, roivalue, maskvol=None, zeroe=True):
         An array of the values in the indicated ROI.
         A 2D matrix if `datavol` is 4D or a 1D vector if `datavol` is 3D.
     """
-    if maskvol is None:
+    if maskvol is not None:
         # get all masked time series within this roi r
         indices = (roivol == roivalue) * (maskvol > 0)
     else:
