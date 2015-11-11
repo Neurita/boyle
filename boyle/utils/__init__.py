@@ -1,1 +1,2 @@
-__author__ = 'alexandre'
+
+from .numpy_conversions import as_ndarray
