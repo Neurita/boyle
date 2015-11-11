@@ -15,9 +15,9 @@ import nibabel as nib
 
 from .read              import get_img_data
 from ..exceptions       import NiftiFilesNotCompatible
-from ..utils.numpy_mem  import as_ndarray
 from .check             import (are_compatible_imgs, check_img, repr_imgs,
                                 check_img_compatibility, get_data)
+from ..utils.numpy_conversions  import as_ndarray
 
 
 def load_mask(image, allow_empty=True):
