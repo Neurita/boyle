@@ -72,6 +72,32 @@ def drain_rois(img):
     return out
 
 
+def largest_connected_component(volume):
+    """Return the largest connected component of a 3D array.
+
+    Parameters
+    -----------
+    volume: numpy.array
+        3D boolean array indicating a volume.
+
+    Returns
+    --------
+    volume: numpy.array
+        3D boolean array with only one connected component.
+    """
+    # We use asarray to be able to work with masked arrays.
+    volume = np.asarray(volume)
+    labels, label_nb = scn.label(volume)
+    if not label_nb:
+        raise ValueError('No non-zero values: no connected components')
+    if label_nb == 1:
+        return volume.astype(np.bool)
+    label_count = np.bincount(labels.ravel().astype(np.int))
+    # discard the 0 label
+    label_count[0] = 0
+    return labels == label_count.argmax()
+
+
 def create_rois_mask(roislist, filelist):
     """Look for the files in filelist containing the names in roislist, these files will be opened, binarised
     and merged in one mask.
@@ -356,7 +382,7 @@ def _extract_timeseries_dict(tsvol, roivol, maskvol=None, roi_values=None, zeroe
         ts = _partition_data(tsvol, roivol, r, maskvol, zeroe)
 
         if len(ts) == 0:
-            ts = np.zeros(tsvol.zeros(tsvol.shape[-1]))
+            ts = np.zeros(tsvol.shape[-1])
 
         ts_dict[r] = ts
 
@@ -400,7 +426,7 @@ def _extract_timeseries_list(tsvol, roivol, maskvol=None, roi_values=None, zeroe
         ts = _partition_data(tsvol, roivol, r, maskvol, zeroe)
 
         if len(ts) == 0:
-            ts = np.zeros(tsvol.zeros(tsvol.shape[-1]))
+            ts = np.zeros(tsvol.shape[-1])
 
         ts_list.append(ts)
 
