@@ -17,7 +17,6 @@ import sys
 from setuptools import Command, setup, find_packages
 from setuptools.command.test import test as TestCommand
 from pip.req import parse_requirements
-from install_deps import get_requirements
 
 
 # long description
