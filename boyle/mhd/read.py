@@ -68,7 +68,7 @@ def load_raw_data_with_mhd(filename):
     data: numpy.ndarray
         n-dimensional image data array.
 
-    meta_dir: dict
+    meta_dict: dict
         A dictionary with the .mhd header content.
     """
     meta_dict = _read_meta_header(filename)
