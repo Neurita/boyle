@@ -157,12 +157,6 @@ def niftilist_to_array(img_filelist, outdtype=None):
         List of absolute file paths to nifti files. All nifti files must have
         the same shape.
 
-    smoothmm: int
-        Integer indicating the size of the FWHM Gaussian smoothing kernel you
-        would like for smoothing the volume before flattening it.
-        Need FSL and nipype.
-        See smooth_volume() source code.
-
     outdtype: dtype
         Type of the elements of the array, if not set will obtain the dtype from
         the first nifti file.
