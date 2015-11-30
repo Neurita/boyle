@@ -1,3 +1,7 @@
+"""
+Extended exceptions
+"""
+
 
 class FilesNotCompatible(Exception):
     file_types = 'files'
