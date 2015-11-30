@@ -9,7 +9,6 @@
 # Use this at your own risk!
 # -------------------------------------------------------------------------------
 
-import os
 import os.path as op
 import logging
 import array
@@ -62,8 +61,9 @@ def dump_raw_data(filename, data):
 
     rawfile = open(filename, 'wb')
     a = array.array('f')
+
     for o in data:
-        a.fromlist(list(o))
+        a.fromlist(list(o.flatten()))
     # if is_little_endian():
     #     a.byteswap()
     a.tofile(rawfile)
@@ -104,15 +104,16 @@ def write_mhd_file(filename, data, shape=None, meta_dict=None):
     """
     # check its extension
     ext = get_extension(filename)
+    fname = op.basename(filename)
     if ext != '.mhd' or ext != '.raw':
-        mhd_filename = filename + '.mhd'
-        raw_filename = filename + '.raw'
+        mhd_filename = fname + '.mhd'
+        raw_filename = fname + '.raw'
     elif ext == '.mhd':
-        mhd_filename = filename
-        raw_filename = remove_ext(filename) + '.raw'
+        mhd_filename = fname
+        raw_filename = remove_ext(fname) + '.raw'
     elif ext == '.raw':
-        mhd_filename = remove_ext(filename) + '.mhd'
-        raw_filename = filename
+        mhd_filename = remove_ext(fname) + '.mhd'
+        raw_filename = fname
     else:
         raise ValueError('`filename` extension {} from {} is not recognised. '
                          'Expected .mhd or .raw.'.format(ext, filename))
@@ -132,15 +133,16 @@ def write_mhd_file(filename, data, shape=None, meta_dict=None):
     meta_dict['NDims']                  = meta_dict.get('NDims',                  str(len(shape)))
     meta_dict['DimSize']                = meta_dict.get('DimSize',                ' '.join([str(i) for i in shape]))
     meta_dict['ElementDataFile']        = meta_dict.get('ElementDataFile',        raw_filename)
+
+    # target files
+    mhd_filename = op.join(op.dirname(filename), mhd_filename)
+    raw_filename = op.join(op.dirname(filename), raw_filename)
+
+    # write the header
     write_meta_header(mhd_filename, meta_dict)
 
-    pwd = os.path.split(filename)[0]
-    if pwd:
-        data_file = op.join(pwd, meta_dict['ElementDataFile'])
-    else:
-        data_file = meta_dict['ElementDataFile']
-
-    dump_raw_data(data_file, data)
+    # write the data
+    dump_raw_data(raw_filename, data)
 
     return mhd_filename, raw_filename
 
