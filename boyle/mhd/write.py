@@ -9,7 +9,6 @@
 # Use this at your own risk!
 # -------------------------------------------------------------------------------
 
-
 import os
 import os.path as op
 import logging
@@ -25,6 +24,16 @@ log = logging.getLogger(__name__)
 
 
 def write_meta_header(filename, meta_dict):
+    """ Write the content of the `meta_dict` into `filename`.
+
+    Parameters
+    ----------
+    filename: str
+        Path to the output file
+
+    meta_dict: dict
+        Dictionary with the fields of the metadata .mhd file
+    """
     header = ''
     # do not use tags = meta_dict.keys() because the order of tags matters
     for tag in MHD_TAGS:
@@ -36,7 +45,16 @@ def write_meta_header(filename, meta_dict):
 
 
 def dump_raw_data(filename, data):
-    """ Write the data into a raw format file. Big endian is always used. """
+    """ Write the data into a raw format file. Big endian is always used.
+
+    Parameters
+    ----------
+    filename: str
+        Path to the output file
+
+    data: numpy.ndarray
+        n-dimensional image data array.
+    """
     if data.ndim == 3:
         # Begin 3D fix
         data = data.reshape([data.shape[0], data.shape[1]*data.shape[2]])
@@ -52,7 +70,38 @@ def dump_raw_data(filename, data):
     rawfile.close()
 
 
-def write_mhd_file(filename, data, shape, meta_dict={}):
+def write_mhd_file(filename, data, shape=None, meta_dict=None):
+    """ Write the `data` and `meta_dict` in two files with names
+    that use `filename` as a prefix.
+
+    Parameters
+    ----------
+    filename: str
+        Path to the output file.
+        This is going to be used as a preffix.
+        Two files will be created, one with a '.mhd' extension
+        and another with '.raw'. If `filename` has any of these already
+        they will be taken into account to build the filenames.
+
+    data: numpy.ndarray
+        n-dimensional image data array.
+
+    shape: tuple
+        Tuple describing the shape of `data`
+        Default: data.shape
+
+    meta_dict: dict
+        Dictionary with the fields of the metadata .mhd file
+        Default: {}
+
+    Returns
+    -------
+    mhd_filename: str
+        Path to the .mhd file
+
+    raw_filename: str
+        Path to the .raw file
+    """
     # check its extension
     ext = get_extension(filename)
     if ext != '.mhd' or ext != '.raw':
@@ -68,6 +117,14 @@ def write_mhd_file(filename, data, shape, meta_dict={}):
         raise ValueError('`filename` extension {} from {} is not recognised. '
                          'Expected .mhd or .raw.'.format(ext, filename))
 
+    # default values
+    if meta_dict is None:
+        meta_dict = {}
+
+    if shape is None:
+        shape = data.shape
+
+    # prepare the default header
     meta_dict['ObjectType']             = meta_dict.get('ObjectType',             'Image')
     meta_dict['BinaryData']             = meta_dict.get('BinaryData',             'True' )
     meta_dict['BinaryDataByteOrderMSB'] = meta_dict.get('BinaryDataByteOrderMSB', 'False')
@@ -85,6 +142,8 @@ def write_mhd_file(filename, data, shape, meta_dict={}):
 
     dump_raw_data(data_file, data)
 
+    return mhd_filename, raw_filename
+
 
 def copy_mhd_and_raw(src, dst):
     """Copy .mhd and .raw files to dst.
@@ -101,6 +160,10 @@ def copy_mhd_and_raw(src, dst):
     dst: str
         Path to the destination of the .mhd and .raw files.
         If a new file name is given, the extension will be ignored.
+
+    Returns
+    -------
+    dst: str
     """
     # check if src exists
     if not op.exists(src):
