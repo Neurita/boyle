@@ -39,7 +39,7 @@ script_path = 'scripts'
 # install_reqs = parse_requirements('requirements.txt')
 req_files = ['pip_requirements.txt', 'requirements.txt']
 
-LICENSE = 'new BSD'
+LICENSE = 'BSD License'
 
 
 setup_dict = dict(
@@ -47,19 +47,16 @@ setup_dict = dict(
     version=__version__,
     description='Medical Image Conversion and Input/Output Tools',
 
-    license='new BSD',
+    license='BSD License',
     author='Alexandre M. Savio',
     author_email='alexsavio@gmail.com',
     maintainer='Alexandre M. Savio',
     maintainer_email='alexsavio@gmail.com',
+    url='https://github.com/neurita/{}'.format(module_name),
 
     packages=find_packages(),
 
     setup_requires=['numpy', 'scipy', 'nibabel', 'pydicom'],
-
-    install_requires=get_requirements(*req_files),
-
-    extra_files=['CHANGES.rst', 'LICENSE', 'README.rst'],
 
     scripts=[op.join(script_path, 'convert_sav.py'),
              op.join(script_path, 'filetree.py'),
@@ -76,7 +73,7 @@ setup_dict = dict(
         'Natural Language :: English',
         'Environment :: Console',
         'Intended Audience :: Healthcare Industry',
-        'License :: OSI Approved ::' + LICENSE,
+        'License :: OSI Approved :: ' + LICENSE,
         'Operating System :: OS Independent',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: Scientific/Engineering :: Medical Science Apps.',
