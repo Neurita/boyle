@@ -9,6 +9,7 @@ Utilities to compute/apply masking from Nifti images
 # 2015, Alexandre Manhaes Savio
 # Use this at your own risk!
 # ------------------------------------------------------------------------------
+import logging as log
 
 import numpy   as np
 import nibabel as nib
@@ -204,7 +205,7 @@ def apply_mask(image, mask_img):
         return vol[mask_data], mask_data
 
 
-def apply_mask_4d(image, mask_img): # , smooth_mm=None, remove_nans=True):
+def apply_mask_4d(image, mask_img):  # , smooth_mm=None, remove_nans=True):
     """Read a Nifti file nii_file and a mask Nifti file.
     Extract the signals in nii_file that are within the mask, the mask indices
     and the mask shape.
@@ -273,14 +274,13 @@ def _apply_mask_to_4d_data(vol_data, mask_img):
     masked_data: numpy.ndarray
         2D array of series with shape (image number, voxel number)
 
-    mask_indices: tuple
-        tuple: np.where(mask)
-
     Note
     ----
     vol_data and mask_file must have the same shape.
     """
-    return vol_data[mask_data], load_mask_data(mask_img)
+    mask_data = load_mask_data(mask_img)
+
+    return vol_data[mask_data], mask_data
 
 
 def vector_to_volume(arr, mask, order='C'):
