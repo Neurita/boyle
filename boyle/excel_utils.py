@@ -1,8 +1,11 @@
-import os
-import os.path as op
-from typing import List, Sequence
 
-import numpy as np
+import os.path as op
+
+try:
+    from typing import List, Sequence
+except:
+    raise ImportError('`typing` module not found, please install it.')
+
 import pandas as pd
 import xlrd
 from   openpyxl import load_workbook
@@ -42,13 +45,14 @@ def _use_openpyxl_or_xlrf(xl_path: str):
         try:
             reader(xl_path)
         except:
-            #fails.append(choice)
+            fails.append(m)
             pass
         else:
             return m
 
     raise RuntimeError("Could not open {} with {}.".format(xl_path,
-                                                           ' nor '.join(fails))) from exc
+                                                           ' nor '.join(fails)))
+
 
 def _check_xl_path(xl_path: str):
     """ Return the expanded absolute path of `xl_path` if
@@ -141,6 +145,7 @@ def _check_cols(df, col_names):
         if not hasattr(df, col):
             raise AttributeError("DataFrame does not have a '{}' column, got {}.".format(col,
                                                                                          df.columns))
+
 
 def col_values(df, col_name):
     """ Return a list of not null values from the `col_name` column of `df`."""
