@@ -25,6 +25,7 @@ install_deps:
 	./install_deps.py requirements.txt
 
 clean: clean-build clean-pyc
+	find . -name '.DS_Store' -exec rm -f {} +
 
 clean-build:
 	rm -fr build/
