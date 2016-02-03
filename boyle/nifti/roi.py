@@ -49,16 +49,19 @@ def drain_rois(img):
 
     out = np.zeros(img_data.shape, dtype=img_data.dtype)
 
-    if img_data.ndim == 2:
-        kernel = np.ones([3, 3], dtype=int)
-    elif img_data.ndim == 3:
-        kernel = np.ones([3, 3, 3], dtype=int)
-    elif img_data.ndim == 4:
-        kernel = np.ones([3, 3, 3, 3], dtype=int)
-    else:
-        msg = 'Could not build an erosion kernel for image {} with shape {}.'.format(repr_imgs(img),
-                                                                                     img_data.shape)
-        raise ValueError(msg)
+    krn_dim = [3] * img_data.ndim
+    kernel  = np.ones(krn_dim, dtype=int)
+
+    # if img_data.ndim == 2:
+    #     kernel = np.ones([3, 3], dtype=int)
+    # elif img_data.ndim == 3:
+    #     kernel = np.ones([3, 3, 3], dtype=int)
+    # elif img_data.ndim == 4:
+    #     kernel = np.ones([3, 3, 3, 3], dtype=int)
+    # else:
+    #     msg = 'Could not build an erosion kernel for image {} with shape {}.'.format(repr_imgs(img),
+    #                                                                                  img_data.shape)
+    #     raise ValueError(msg)
 
     vals = np.unique(img_data)
     vals = vals[vals != 0]
