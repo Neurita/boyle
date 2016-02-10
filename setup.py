@@ -14,9 +14,8 @@ from __future__ import print_function
 import os.path as op
 import io
 import sys
-from setuptools import Command, setup, find_packages
+from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
-from pip.req import parse_requirements
 
 
 # long description
@@ -36,11 +35,7 @@ exec(compile(open(version_pyfile).read(), version_pyfile, 'exec'))
 
 script_path = 'scripts'
 
-# install_reqs = parse_requirements('requirements.txt')
-req_files = ['pip_requirements.txt', 'requirements.txt']
-
 LICENSE = 'BSD License'
-
 
 setup_dict = dict(
     name=module_name,
