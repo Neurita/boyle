@@ -53,6 +53,35 @@ def dir_match(regex, wd=None):
     return filter_list(ls, filt)
 
 
+def recursive_dir_match(folder_path, regex=None):
+    """
+    Returns absolute paths of folders that match the regex within folder_path and
+    all its children folders.
+
+    Note: The regex matching is done using the match function
+    of the re module.
+
+    Parameters
+    ----------
+    folder_path: string
+
+    regex: string
+
+    Returns
+    -------
+    A list of strings.
+    """
+    if regex is None:
+        regex = ''
+
+    outlist = []
+    for root, dirs, files in os.walk(folder_path):
+        outlist.extend([op.join(root, f) for f in dirs
+                        if re.match(regex, f)])
+
+    return outlist
+
+
 def get_file_list(file_dir, regex=None):
     """
     Creates a list of files that match the search_regex within file_dir.
@@ -106,7 +135,7 @@ def recursive_find(folder_path, regex=None):
 
 def recursive_find_match(folder_path, regex=None):
     """
-    Returns absolute paths of files that match the regex within file_dir and
+    Returns absolute paths of files that match the regex within folder_path and
     all its children folders.
 
     Note: The regex matching is done using the match function

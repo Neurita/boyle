@@ -10,14 +10,16 @@
 #-------------------------------------------------------------------------------
 
 
-import numpy as np
-import nibabel as nib
 import logging
-import scipy.ndimage as scn
-from scipy.ndimage.measurements import center_of_mass
-from collections import OrderedDict
+import numpy            as np
+import nibabel          as nib
+import scipy.ndimage    as scn
+from   scipy.ndimage.measurements   import center_of_mass
+from   collections                  import OrderedDict
 
-from ..strings import search_list
+from   .read                        import get_nii_data, get_nii_info
+from   ..utils.strings              import search_list
+
 
 log = logging.getLogger(__name__)
 
@@ -251,3 +253,37 @@ def extract_timeseries_list(tsvol, roivol, maskvol=None, roi_list=None):
         ts_list.append(ts)
 
     return ts_list
+
+
+def get_3D_from_4D(nii_file, vol_idx=0):
+    """Return a 3D volume from a 4D nifti image file
+
+    Parameters
+    ----------
+    nii_file: str
+        Path to the 4D Nifti file
+
+    vol_idx: int
+        Index of the 3D volume to be extracted from the 4D volume.
+
+    Returns
+    -------
+    vol, hdr, aff
+        The data array, the image header and the affine transform matrix.
+    """
+    vol      = get_nii_data(nii_file)
+    hdr, aff = get_nii_info(nii_file)
+
+    if vol.ndim != 4:
+        msg = 'Volume in {} does not have 4 dimensions.'.format(nii_file)
+        log.error(msg)
+        raise ValueError(msg)
+
+    if not 0 <= vol_idx < vol.shape[3]:
+        msg = 'IndexError: 4th dimension in volume {} has {} volumes, not {}.'.format(nii_file, vol.shape[3], vol_idx)
+        log.error(msg)
+        raise IndexError(msg)
+
+    new_vol = vol[:, :, :, vol_idx].copy()
+
+    return new_vol, hdr, aff

@@ -4,7 +4,7 @@ import logging
 from collections import OrderedDict
 
 # Known two-part file extensions
-ALLOWED_EXTS = {'.gz': {'.nii', '.raw', '.mhd'}}
+ALLOWED_EXTS = {'.gz': {'.nii'}}
 
 LOG_LEVEL = logging.INFO
 

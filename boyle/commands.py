@@ -11,10 +11,44 @@
 #Use this at your own risk!
 #------------------------------------------------------------------------------
 
+import os
+import sys
+import shutil
 import subprocess
 import logging
 
 log = logging.getLogger(__name__)
+
+
+def which(program):
+    """Returns the absolute path of the given CLI program name."""
+    if (sys.version_info > (3, 0)):
+        return which_py3(program)
+    else:
+       # Python 2 code in this block
+        return which_py2(program)
+
+
+def which_py3(program):
+    return shutil.which(program)
+
+
+def which_py2(program):
+    def is_exe(fpath):
+        return os.path.isfile(fpath) and os.access(fpath, os.X_OK)
+
+    fpath, fname = os.path.split(program)
+    if fpath:
+        if is_exe(program):
+            return program
+    else:
+        for path in os.environ["PATH"].split(os.pathsep):
+            path = path.strip('"')
+            exe_file = os.path.join(path, program)
+            if is_exe(exe_file):
+                return exe_file
+
+    return None
 
 
 def check_call(cmd_args):
@@ -93,4 +127,3 @@ def condor_submit(cmd):
 #     echo executing: $@ >&2
 # fi
 # exec $sge_command $@ | awk '{print $3}'
-

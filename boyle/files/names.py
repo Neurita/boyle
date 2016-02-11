@@ -68,7 +68,7 @@ def get_extension(filepath, check_if_exists=False, allowed_exts=ALLOWED_EXTS):
         rest, ext = op.splitext(filepath)
         if ext in allowed_exts:
             alloweds = allowed_exts[ext]
-            _, ext2 = op.splitext(filepath)
+            _, ext2 = op.splitext(rest)
             if ext2 in alloweds:
                 ext = ext2 + ext
 

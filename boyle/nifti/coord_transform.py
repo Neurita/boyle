@@ -23,7 +23,8 @@ def voxcoord_to_mm(cm, i, j, k):
     ----------
     cm: nipy.core.reference.coordinate_map.CoordinateMap
 
-    x, y, z: floats
+    i, j, k: floats
+        Voxel coordinates
 
     Returns
     -------
@@ -46,6 +47,7 @@ def mm_to_voxcoord(cm, x, y, z):
     cm: nipy.core.reference.coordinate_map.CoordinateMap
 
     x, y, z: floats
+        Physical coordinates
 
     Returns
     -------
@@ -89,7 +91,3 @@ def get_coordmap_array(coordmap, shape):
     See: http://nipy.org/nipy/stable/api/generated/nipy.core.reference.array_coords.html?highlight=grid#nipy.core.reference.array_coords.Grid
     '''
     return ArrayCoordMap(coordmap, shape)
-
-
-
-

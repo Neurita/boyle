@@ -1,5 +1,5 @@
 #pip install the rest
-h5py>=2.3.1
+#h5py>=2.3.1
 pandas>=0.15
 python-Levenshtein>=0.11.2
 Baker>=1.3
