@@ -14,10 +14,8 @@ from __future__ import print_function
 import os.path as op
 import io
 import sys
-from setuptools import Command, setup, find_packages
+from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
-from pip.req import parse_requirements
-from install_deps import get_requirements
 
 
 # long description
@@ -30,37 +28,30 @@ def read(*filenames):
 
 
 # Get version without importing, which avoids dependency issues
-module_name = find_packages(exclude=['tests'])[0]
+module_name    = find_packages(exclude=['tests'])[0]
 version_pyfile = op.join(module_name, 'version.py')
 exec(compile(open(version_pyfile).read(), version_pyfile, 'exec'))
 
 
 script_path = 'scripts'
 
-# install_reqs = parse_requirements('requirements.txt')
-req_files = ['pip_requirements.txt', 'requirements.txt']
-
-LICENSE = 'new BSD'
-
+LICENSE = 'BSD License'
 
 setup_dict = dict(
     name=module_name,
     version=__version__,
     description='Medical Image Conversion and Input/Output Tools',
 
-    license='BSD 3-Clause',
+    license='BSD License',
     author='Alexandre M. Savio',
     author_email='alexsavio@gmail.com',
     maintainer='Alexandre M. Savio',
     maintainer_email='alexsavio@gmail.com',
+    url='https://github.com/neurita/{}'.format(module_name),
 
     packages=find_packages(),
 
-    setup_requires=['numpy'],
-
-    install_requires=get_requirements(*req_files),
-
-    extra_files=['CHANGES.rst', 'LICENSE', 'README.rst'],
+    setup_requires=['numpy', 'scipy', 'nibabel', 'pydicom'],
 
     scripts=[op.join(script_path, 'convert_sav.py'),
              op.join(script_path, 'filetree.py'),
@@ -77,7 +68,7 @@ setup_dict = dict(
         'Natural Language :: English',
         'Environment :: Console',
         'Intended Audience :: Healthcare Industry',
-        'License :: OSI Approved ::' + LICENSE,
+        'License :: OSI Approved :: ' + LICENSE,
         'Operating System :: OS Independent',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: Scientific/Engineering :: Medical Science Apps.',

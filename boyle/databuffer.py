@@ -308,18 +308,22 @@ class NumpyHDFStore(HDFStore):
 
         Parameters
         ----------
-        key : object
+        key : str
+
         value : {Series, DataFrame, Panel, Numpy ndarray}
+
         format : 'fixed(f)|table(t)', default is 'fixed'
-        fixed(f) : Fixed format
-        Fast writing/reading. Not-appendable, nor searchable
-        table(t) : Table format
-        Write as a PyTables Table structure which may perform
-        worse but allow more flexible operations like searching
-        / selecting subsets of the data
+            fixed(f) : Fixed format
+                Fast writing/reading. Not-appendable, nor searchable
+
+            table(t) : Table format
+                Write as a PyTables Table structure which may perform worse but allow more flexible operations
+                like searching/selecting subsets of the data
+
         append : boolean, default False
-        This will force Table format, append the input data to the
-        existing.
+            This will force Table format, append the input data to the
+            existing.
+
         encoding : default None, provide an encoding for strings
         """
         if not isinstance(value, np.ndarray):
@@ -376,9 +380,7 @@ class NumpyHDFStore(HDFStore):
 
     def put_df_as_ndarray(self, key, df, range_values, loop_multiindex=False,
                           unstack=False, fill_value=0, fill_method=None):
-        """
-        Returns a PyTables HDF Array from df in the shape given by its index columns
-        range values.
+        """Returns a PyTables HDF Array from df in the shape given by its index columns range values.
 
         :param key: string object
 

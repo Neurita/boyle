@@ -136,8 +136,7 @@ class ItemSet(object):
 
 
 class DefaultOrderedDict(OrderedDict):
-    """An ordered and default dict.
-    """
+    """An ordered and default dict."""
     def __init__(self, default_factory=None, *a, **kw):
         if (default_factory is not None and
                 not isinstance(default_factory, Callable)):

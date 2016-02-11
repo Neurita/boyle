@@ -1,13 +1,26 @@
+# coding=utf-8
+"""
+Utilities for Dicom file management.
+"""
+# ------------------------------------------------------------------------------
+# Author: Alexandre Manhaes Savio <alexsavio@gmail.com>
+#
+# 2015, Alexandre Manhaes Savio
+# Use this at your own risk!
+# ------------------------------------------------------------------------------
+
 import os
 import os.path as op
-
-import dicom
 import logging
 import subprocess
 from   collections   import defaultdict
-from   dicom.dataset import FileDataset
 
-from ..files.search import get_all_files
+import pydicom as dicom
+from   pydicom.dataset import FileDataset
+
+from ..commands import call_command
+from ..files.search import get_all_files, recursive_glob
+
 
 log = logging.getLogger(__name__)
 
@@ -52,8 +65,7 @@ class DicomFile(FileDataset):
             self.file_path = op.abspath(file_path)
 
         except Exception as exc:
-            log.exception('Error reading file {0}.'.format(file_path))
-            raise
+            raise Exception('Error reading file {0}.'.format(file_path)) from exc
 
     def get_attributes(self, attributes, default=''):
         """Return the attributes values from this DicomFile
@@ -106,9 +118,8 @@ def get_unique_field_values(dcm_file_list, field_name):
         for dcm in dcm_file_list:
             field_values.add(str(DicomFile(dcm).get_attributes(field_name)))
         return field_values
-    except Exception:
-        log.exception('Error reading file {}'.format(dcm))
-        raise
+    except Exception as exc:
+        raise Exception('Error reading file {}'.format(dcm)) from exc
 
 
 def find_all_dicom_files(root_path):
@@ -132,7 +143,7 @@ def find_all_dicom_files(root_path):
             if is_dicom_file(fpath):
                 dicoms.add(fpath)
     except Exception as exc:
-        log.exceptions('Error reading file {0}.'.format(fpath))
+        raise Exception('Error reading file {0}.'.format(fpath)) from exc
 
     return dicoms
 
@@ -166,10 +177,20 @@ def is_dicom_file(filepath):
 
 
 def group_dicom_files(dicom_paths, hdr_field='PatientID'):
-    """
+    """Group in a dictionary all the DICOM files in dicom_paths
+    separated by the given `hdr_field` tag value.
 
-    :param dicom_paths: str
-    :return: dict of dicom_paths
+    Parameters
+    ----------
+    dicom_paths: str
+        Iterable of DICOM file paths.
+
+    hdr_field: str
+        Name of the DICOM tag whose values will be used as key for the group.
+
+    Returns
+    -------
+    dicom_groups: dict of dicom_paths
     """
     dicom_groups = defaultdict(list)
     try:
@@ -178,99 +199,37 @@ def group_dicom_files(dicom_paths, hdr_field='PatientID'):
             group_key = getattr(hdr, hdr_field)
             dicom_groups[group_key].append(dcm)
     except Exception as exc:
-        log.exception('Error reading file {0}.'.format(dcm))
+        raise Exception('Error reading file {0}.'.format(dcm)) from exc
 
     return dicom_groups
 
 
-def call_dcm2nii(input_path):
+def decompress(input_dir, dcm_pattern='*.dcm'):
+    """ Decompress all *.dcm files recursively found in DICOM_DIR.
+    This uses 'gdcmconv --raw'.
+    It works when 'dcm2nii' shows the `Unsupported Transfer Syntax` error. This error is
+    usually caused by lack of JPEG2000 support in dcm2nii compilation.
+
+    Read more:
+    http://www.nitrc.org/plugins/mwiki/index.php/dcm2nii:MainPage#Transfer_Syntaxes_and_Compressed_Images
+
+    Parameters
+    ----------
+    input_dir: str
+        Folder path
+
+    dcm_patther: str
+        Pattern of the DICOM file names in `input_dir`.
+
+    Notes
+    -----
+    The *.dcm files in `input_folder` will be overwritten.
     """
-
-    :param input_path: str
-    :return:
-    """
-    try:
-        log.info('dcm2nii {0}'.format(input_path))
-        return subprocess.call('dcm2nii {0}'.format(input_path),
-                               shell=True)
-
-    except Exception as e:
-        log.exception('Error calling dcm2nii on {0}.'.format(input_path))
-
-
-def anonymize_dicom_file(dcm_file, remove_private_tags=False,
-                         remove_curves=False):
-    """Anonymizes the given dcm_file.
-
-    Anonymizing means: putting nonsense information into tags:
-    PatientName, PatientAddress and PatientBirthDate.
-
-    :param acqfolder: path.py path
-    Path to the DICOM file.
-    """
-    assert(dcm_file.isfile())
-
-    # Load the current dicom file to 'anonymize'
-    plan = dicom.read_file(dcm_file)
-
-    plan.PatientName = 'Anonymous'
-    plan.PatientAddress = 'North Pole'
-
-    # Define call-back functions for the dataset.walk() function
-    def PN_callback(ds, data_element):
-        """Called from the dataset "walk" recursive function for all data elements."""
-        if data_element.VR == "PN":
-            data_element.value = 'Anonymous'
-
-    def curves_callback(ds, data_element):
-        """Called from the dataset "walk" recursive function for all data elements."""
-        if data_element.tag.group & 0xFF00 == 0x5000:
-            del ds[data_element.tag]
-
-    # Remove patient name and any other person names
-    plan.walk(PN_callback)
-
-    # Remove data elements (should only do so if DICOM type 3 optional)
-    # Use general loop so easy to add more later
-    # Could also have done: del ds.OtherPatientIDs, etc.
-    #for name in ['OtherPatientIDs']:
-    #    if name in plan:
-    #        delattr(ds, name)
-
-    # Same as above but for blanking data elements that are type 2.
-    for name in ['PatientsBirthDate']:
-        if name in plan:
-            plan.data_element(name).value = ''
-
-    # Remove private tags if function argument says to do so. Same for curves
-    if remove_private_tags:
-        plan.remove_private_tags()
-    if remove_curves:
-        plan.walk(curves_callback)
-
-    # write the 'anonymized' DICOM out under the new filename
-    plan.save_as(dcm_file)
-
-
-def anonymize_dicom_file_dcmtk(dcm_file):
-    """Anonymizes the given dcm_file.
-
-    Anonymizing means: putting nonsense information into tags:
-    PatientName, PatientAddress and PatientBirthDate.
-
-    :param acqfolder: path.py path
-    Path to the DICOM file.
-    """
-    assert(dcm_file.isfile())
-
-    subprocess.call('dcmodify --modify PatientName=Anonymous ' + dcm_file,
-                    shell=True)
-    subprocess.call('dcmodify --modify PatientBirthDate=17000101 ' + dcm_file,
-                    shell=True)
-    subprocess.call('dcmodify --modify PatientAddress=North Pole ' + dcm_file,
-                    shell=True)
-
-    os.remove(dcm_file + '.bak')
+    dcmfiles = sorted(recursive_glob(input_dir, dcm_pattern))
+    for dcm in dcmfiles:
+        cmd = 'gdcmconv --raw -i "{0}" -o "{0}"'.format(dcm)
+        log.debug('Calling {}.'.format(cmd))
+        subprocess.check_call(cmd, shell=True)
 
 
 if __name__ == '__main__':

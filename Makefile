@@ -25,6 +25,7 @@ install_deps:
 	./install_deps.py requirements.txt
 
 clean: clean-build clean-pyc
+	find . -name '.DS_Store' -exec rm -f {} +
 
 clean-build:
 	rm -fr build/
@@ -35,6 +36,7 @@ clean-pyc:
 	find . -name '*.pyc' -exec rm -f {} +
 	find . -name '*.pyo' -exec rm -f {} +
 	find . -name '*~' -exec rm -f {} +
+	find . -name '__pycache__' -exec rm -rf {} +
 
 lint:
 	flake8 $(project-name) test

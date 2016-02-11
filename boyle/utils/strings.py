@@ -1,62 +1,78 @@
 # coding=utf-8
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 
-#Author: Alexandre Manhaes Savio <alexsavio@gmail.com>
-#Grupo de Inteligencia Computational <www.ehu.es/ccwintco>
-#Universidad del Pais Vasco UPV/EHU
+# Author: Alexandre Manhaes Savio <alexsavio@gmail.com>
+# Grupo de Inteligencia Computational <www.ehu.es/ccwintco>
+# Universidad del Pais Vasco UPV/EHU
 #
-#2013, Alexandre Manhaes Savio
-#Use this at your own risk!
-#-------------------------------------------------------------------------------
+# 2013, Alexandre Manhaes Savio
+# Use this at your own risk!
+# -------------------------------------------------------------------------------
 
 import re
 
 
 def filter_objlist(olist, fieldname, fieldval):
     """
-    Returns a list with of the objetcts in olist that have a fieldname valued as fieldval
+    Returns a list with of the objects in olist that have a fieldname valued as fieldval
 
-    @param olist: list of objects
-    @param fieldname: string
-    @param fieldval: anything
+    Parameters
+    ----------
+    olist: list of objects
 
-    @return: list of objets
+    fieldname: string
+
+    fieldval: anything
+
+    Returns
+    -------
+    list of objets
     """
     return [x for x in olist if getattr(x, fieldname) == fieldval]
 
 
-
 def filter_list(lst, filt):
     """
-    :param lst: list
-    :param filter: function
-    Unary string filter function
-    :return: list
-    List of strings that passed the filter
+    Parameters
+    ----------
+    lst: list
 
-    :example
-    l = ['12123123', 'N123213']
-    filt = re.compile('\d*').match
-    nu_l = list_filter(l, filt)
+    filter: function
+        Unary string filter function
+
+    Returns
+    -------
+    list
+        List of items that passed the filter
+
+    Example
+    -------
+    >>> l    = ['12123123', 'N123213']
+    >>> filt = re.compile('\d*').match
+    >>> nu_l = list_filter(l, filt)
     """
     return [m for s in lst for m in (filt(s),) if m]
 
 
 def match_list(lst, pattern, group_names=[]):
     """
-    @param lst: list of strings
+    Parameters
+    ----------
+    lst: list of str
 
-    @param regex: string
+    regex: string
 
-    @param group_names: list of strings
-    See re.MatchObject group docstring
+    group_names: list of strings
+        See re.MatchObject group docstring
 
-    @return: list of strings
-    Filtered list, with the strings that match the pattern
+    Returns
+    -------
+    list of strings
+        Filtered list, with the strings that match the pattern
     """
     filtfn = re.compile(pattern).match
     filtlst = filter_list(lst, filtfn)
-    if group_names is None:
+    if not group_names:
         return [m.string for m in filtlst]
     else:
         return [m.group(group_names) for m in filtlst]
@@ -64,11 +80,17 @@ def match_list(lst, pattern, group_names=[]):
 
 def search_list(lst, pattern):
     """
-    @param pattern: string
-    @param lst: list of strings
-    @return: list of strings
-    Filtered lists with the strings in which the pattern is found.
 
+    Parameters
+    ----------
+    pattern: string
+
+    lst: list of strings
+
+    Returns
+    -------
+    filtered_list: list of str
+        Filtered lists with the strings in which the pattern is found.
     """
     filt = re.compile(pattern).search
     return filter_list(lst, filt)
@@ -76,9 +98,14 @@ def search_list(lst, pattern):
 
 def append_to_keys(adict, preffix):
     """
-    @param adict:
-    @param preffix:
-    @return:
+    Parameters
+    ----------
+    adict:
+    preffix:
+
+    Returns
+    -------
+
     """
     return {preffix + str(key): (value if isinstance(value, dict) else value)
             for key, value in list(adict.items())}
@@ -86,9 +113,13 @@ def append_to_keys(adict, preffix):
 
 def append_to_list(lst, preffix):
     """
-    @param lst:
-    @param preffix:
-    @return:
+    Parameters
+    ----------
+    lst:
+    preffix:
+
+    Returns
+    -------
     """
     return [preffix + str(item) for item in lst]
 
@@ -97,9 +128,13 @@ def is_valid_regex(string):
     """
     Checks whether the re module can compile the given regular expression.
 
-    :param string: str
+    Parameters
+    ----------
+    string: str
 
-    :return: boolean
+    Returns
+    -------
+    boolean
     """
     try:
         re.compile(string)
@@ -112,9 +147,13 @@ def is_valid_regex(string):
 def remove_from_string(string, values):
     """
 
-    :param string:
-    :param values:
-    :return:
+    Parameters
+    ----------
+    string:
+    values:
+
+    Returns
+    -------
     """
     for v in values:
         string = string.replace(v, '')
@@ -128,3 +167,69 @@ def count_hits(strings, pattern):
         if re.match(pattern, s):
             count += 1
     return count
+
+
+def where_is(strings, pattern, n=1, lookup_func=re.match):
+    """Return index of the nth match found of pattern in strings
+
+    Parameters
+    ----------
+    strings: list of str
+        List of strings
+
+    pattern: str
+        Pattern to be matched
+
+    nth: int
+        Number of times the match must happen to return the item index.
+
+    lookup_func: callable
+        Function to match each item in strings to the pattern, e.g., re.match or re.search.
+
+    Returns
+    -------
+    index: int
+        Index of the nth item that matches the pattern.
+        If there are no n matches will return -1
+    """
+    count = 0
+    for idx, item in enumerate(strings):
+        if lookup_func(pattern, item):
+            count += 1
+            if count == n:
+                return idx
+    return -1
+
+
+def to_str(bytes_or_str):
+    if isinstance(bytes_or_str, bytes):
+        value = bytes_or_str.decode('utf-8')
+    else:
+        value = bytes_or_str
+    return value  # Instance of str”
+
+
+def to_bytes(bytes_or_str):
+    if isinstance(bytes_or_str, str):
+        value = bytes_or_str.encode('utf-8')
+    else:
+        value = bytes_or_str
+    return value # Instance of bytes”
+
+
+# Python 2
+def to_unicode(unicode_or_str):
+    if isinstance(unicode_or_str, str):
+        value = unicode_or_str.decode('utf-8')
+    else:
+        value = unicode_or_str
+    return value # Instance of unicode
+
+
+# Python 2
+def to_str2(unicode_or_str):
+    if isinstance(unicode_or_str, unicode):
+        value = unicode_or_str.encode('utf-8')
+    else:
+        value = unicode_or_str
+    return value # Instance of str”

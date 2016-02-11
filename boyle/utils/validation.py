@@ -1,11 +1,14 @@
-"""Utilities for input validation"""
-# Authors: Olivier Grisel
-#          Gael Varoquaux
-#          Andreas Mueller
-#          Lars Buitinck
-#          Alexandre Gramfort
-#          Nicolas Tresegnie
-# License: BSD 3 clause
+# coding=utf-8
+"""
+Utilities for input validation.
+"""
+# ------------------------------------------------------------------------------
+# Author: Alexandre Manhaes Savio <alexsavio@gmail.com>
+# Wrocław University of Technology
+#
+# 2015, Alexandre Manhaes Savio
+# Use this at your own risk!
+# ------------------------------------------------------------------------------
 
 import warnings
 import numbers
@@ -15,14 +18,14 @@ import scipy.sparse as sp
 
 
 class DataConversionWarning(UserWarning):
-    "A warning on implicit data conversions happening in the code"
+    """A warning on implicit data conversions happening in the code"""
     pass
 
 warnings.simplefilter("always", DataConversionWarning)
 
 
 class NonBLASDotWarning(UserWarning):
-    "A warning on implicit dispatch to numpy.dot"
+    """A warning on implicit dispatch to numpy.dot"""
     pass
 
 
