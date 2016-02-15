@@ -94,9 +94,9 @@ class DicomFile(FileDataset):
 
 
 def get_dicom_files(dirpath):
-    return [DicomFile(os.path.join(dp, f))
+    return (DicomFile(os.path.join(dp, f))
             for dp, dn, filenames in os.walk(dirpath)
-            for f in filenames if is_dicom_file(os.path.join(dp, f))]
+            for f in filenames if is_dicom_file(os.path.join(dp, f)))
 
 
 def get_unique_field_values(dcm_file_list, field_name):
