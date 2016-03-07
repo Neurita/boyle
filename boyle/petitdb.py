@@ -11,7 +11,7 @@ requires: tinydb >= v3.0 (note that this is not a stable release yet.)
 # 2015, Alexandre Manhaes Savio
 # Use this at your own risk!
 # -------------------------------------------------------------------------------
-
+from datetime import datetime
 from collections import OrderedDict
 
 try:
@@ -23,6 +23,9 @@ from tinydb             import TinyDB, where
 from tinydb.storages    import JSONStorage
 from tinydb.middlewares import CachingMiddleware
 
+from six                import string_types
+from dateutil.tz        import tzutc
+
 
 class MoreThanOneItemError(Exception):
     pass
@@ -30,6 +33,49 @@ class MoreThanOneItemError(Exception):
 
 class NotUniqueItemError(Exception):
     pass
+
+
+def timestamp_with_tzinfo(dt):
+    """
+    Serialize a date/time value into an ISO8601 text representation
+    adjusted (if needed) to UTC timezone.
+
+    For instance:
+    >>> serialize_date(datetime(2012, 4, 10, 22, 38, 20, 604391))
+    '2012-04-10T22:38:20.604391Z'
+    """
+    utc = tzutc()
+
+    if dt.tzinfo:
+        dt = dt.astimezone(utc).replace(tzinfo=None)
+    return dt.isoformat() + 'Z'
+
+
+def timestamp_to_date_str(dt):
+    """ Serialize a date/time value into YYYY-MM-DD date string. """
+    return str(dt.date())
+
+
+def _to_string(data):
+    """ Convert to string all values in `data`.
+
+    Parameters
+    ----------
+    data: dict[str]->object
+
+    Returns
+    -------
+    string_data: dict[str]->str
+    """
+    sdata = data.copy()
+    for k, v in data.items():
+        if isinstance(v, datetime):
+            sdata[k] = timestamp_to_date_str(v)
+
+        elif not isinstance(v, (string_types, float, int)):
+            sdata[k] = str(v)
+
+    return sdata
 
 
 def insert_unique(table, data, unique_fields=None, *, raise_if_found=False):
@@ -73,7 +119,10 @@ def insert_unique(table, data, unique_fields=None, *, raise_if_found=False):
     if item is not None:
         if raise_if_found:
             raise NotUniqueItemError('Not expected to find an item with the same '
-                                     'values for {}.'.format(unique_fields))
+                                     'values for {}. Inserting {} got {} in eid {}.'.format(unique_fields,
+                                                                                            data,
+                                                                                            table.get(eid=item),
+                                                                                            item))
         else:
             return item
 
@@ -359,7 +408,7 @@ class PetitDB(TinyDB):
             values from `data` is found in `table`.
         """
         return insert_unique(table=self.table(table_name),
-                             data=data,
+                             data=_to_string(data),
                              unique_fields=unique_fields,
                              raise_if_found=raise_if_found)
 
@@ -425,6 +474,7 @@ class PetitDB(TinyDB):
         table_name: str
 
         data: dict
+            Sample data for query
 
         unique_fields: str or list of str
 
@@ -450,10 +500,11 @@ class PetitDB(TinyDB):
         table_name: str
 
         fields: dict or function[dict -> None]
-            the fields that the matching element will have
+            new data/values to insert into the unique element
             or a method that will update the elements.
 
         data: dict
+            Sample data for query
 
         cond: tinydb.Query
             which elements to update
@@ -478,7 +529,7 @@ class PetitDB(TinyDB):
                 raise IndexError(msg)
 
         else:
-            self.table(table_name).update(fields, cond=cond, eids=[eid])
+            self.table(table_name).update(_to_string(fields), cond=cond, eids=[eid])
 
         return eid
 
