@@ -12,6 +12,7 @@ clinical and neuroimaging data.
 from __future__ import print_function
 
 import os.path as op
+from glob import glob
 import io
 import sys
 from setuptools import setup, find_packages
@@ -33,8 +34,6 @@ version_pyfile = op.join(module_name, 'version.py')
 exec(compile(open(version_pyfile).read(), version_pyfile, 'exec'))
 
 
-script_path = 'scripts'
-
 LICENSE = 'BSD License'
 
 setup_dict = dict(
@@ -53,9 +52,7 @@ setup_dict = dict(
 
     setup_requires=['numpy', 'scipy', 'nibabel', 'pydicom'],
 
-    scripts=[op.join(script_path, 'convert_sav.py'),
-             op.join(script_path, 'filetree.py'),
-             op.join(script_path, 'compare_id_sets.py')],
+    scripts=[glob(op.join('scripts', '*')),],
 
     long_description=read('README.rst', 'CHANGES.rst'),
 

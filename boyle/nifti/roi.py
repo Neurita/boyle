@@ -52,17 +52,6 @@ def drain_rois(img):
     krn_dim = [3] * img_data.ndim
     kernel  = np.ones(krn_dim, dtype=int)
 
-    # if img_data.ndim == 2:
-    #     kernel = np.ones([3, 3], dtype=int)
-    # elif img_data.ndim == 3:
-    #     kernel = np.ones([3, 3, 3], dtype=int)
-    # elif img_data.ndim == 4:
-    #     kernel = np.ones([3, 3, 3, 3], dtype=int)
-    # else:
-    #     msg = 'Could not build an erosion kernel for image {} with shape {}.'.format(repr_imgs(img),
-    #                                                                                  img_data.shape)
-    #     raise ValueError(msg)
-
     vals = np.unique(img_data)
     vals = vals[vals != 0]
 
@@ -124,7 +113,7 @@ def create_rois_mask(roislist, filelist):
         try:
             roifiles.append(search_list(roi, filelist)[0])
         except Exception as exc:
-            raise Exception('Error creating list of roi files.') from exc
+            raise Exception('Error creating list of roi files. \n {}'.format(str(exc)))
 
     return binarise(roifiles)
 
@@ -267,10 +256,9 @@ def partition_timeseries(image, roi_img, mask_img=None, zeroe=True, roi_values=N
         try:
             check_img_compatibility(img, mask, only_check_3d=True)
         except Exception as exc:
-            raise Exception('Given image and mask image are not compatible.') from exc
+            raise Exception('Given image and mask image are not compatible. \n {}'.format(str(exc)))
         else:
             mask_data = mask.get_data()
-
 
     # choose function to call
     if outdict:

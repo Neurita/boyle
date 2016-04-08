@@ -1,0 +1,57 @@
+#!/usr/bin/env python
+"""
+Create one volume with the ROIs of the given file without the
+internal voxels (drained).
+"""
+#------------------------------------------------------------------------------
+# Author: Alexandre Manhaes Savio <alexsavio@gmail.com>
+# Nuklear Medizin Department
+# Klinikum rechts der Isar der Technische Universitaet Muenchen, Deutschland
+#
+# 2016, Alexandre Manhaes Savio
+# Use this at your own risk!
+#------------------------------------------------------------------------------
+
+import argparse
+
+from boyle.nifti.roi import drain_rois
+from boyle.nifti.utils import nifti_out
+
+
+@nifti_out
+def _drain_rois(img):
+    """A nifti_out decorated version of boyle.nifti.roi.drain_rois.
+    Parameters
+    ----------
+    img: nifti-like object or str
+
+    Returns
+    -------
+    drained_img: nibabel.NiftiImage1
+    """
+    return drain_rois(img)
+
+
+def set_parser():
+    parser = argparse.ArgumentParser(description='Empties each ROI in the 3D input volume and saves the result in the output volume.')
+    parser.add_argument('-i', '--in', dest='input',
+                        required=True, help='input file')
+    parser.add_argument('-o', '--out', dest='output',
+                        required=True, help='output file')
+    return parser
+
+
+if __name__ == "__main__":
+
+    parser = set_parser()
+
+    try:
+        args = parser.parse_args()
+    except argparse.ArgumentError as exc:
+        parser.error(str(exc))
+        exit(-1)
+
+    out_img = _drain_rois(args.input)
+
+    out_img.to_filename(args.output)
+
