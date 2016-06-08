@@ -92,12 +92,39 @@ def nifti_out(f):
 
 
 @nifti_out
-def thr_img(img, thr=2., func='__gt__'):
+def thr_img(img, thr=2., mode='+'):
     """ Use the given magic function name `func` to threshold with value `thr`
-    the data of `img` and return a new nibabel.Nifti1Image."""
+    the data of `img` and return a new nibabel.Nifti1Image.
+    Parameters
+    ----------
+    img: img-like
+
+    thr: float or int
+        The threshold value.
+
+    mode: str
+        Choices: '+' for positive threshold,
+                 '+-' for positive and negative threshold and
+                 '-' for negative threshold.
+    Returns
+    -------
+    thr_img: nibabel.Nifti1Image
+        Thresholded image
+    """
+
     vol  = read_img(img).get_data()
-    func = getattr(vol, func)
-    return vol * func(thr)
+
+    if mode == '+':
+        mask = vol > thr
+    elif mode == '+-' or mode == '-+':
+        mask = np.abs(vol) > thr
+    elif mode == '-':
+        mask = vol < -thr
+    else:
+        raise ValueError("Expected `mode` to be one of ('+', '+-', '-+', '-'), "
+                         "got {}.".format(mode))
+
+    return vol * mask
 
 
 @nifti_out
@@ -148,6 +175,8 @@ def div_img(img1, div2):
 @nifti_out
 def apply_mask(img, mask):
     """Return the image with the given `mask` applied."""
+    from .mask import apply_mask
+
     vol, _ = apply_mask(img, mask)
     return vector_to_volume(vol, read_img(mask).get_data().astype(bool))
 
@@ -179,27 +208,31 @@ def icc_img_to_zscore(icc, center_image=False):
 
 
 @nifti_out
-def spatial_map(icc, thr):
+def spatial_map(icc, thr, mode='+'):
     """ Return the thresholded z-scored `icc`. """
-    return thr_img(icc_img_to_zscore(icc), thr=thr).get_data()
+    return thr_img(icc_img_to_zscore(icc), thr=thr, mode=mode).get_data()
 
 
-def filter_icc(icc, thr, zscore, mask):
+def filter_icc(icc, mask=None, thr=2, zscore=True, mode="+"):
     """ Threshold then mask an IC correlation map.
-
     Parameters
     ----------
     icc: img-like
         The 'raw' ICC map.
 
-    zscore: bool
-        If True will calculate the z-score of the ICC before thresholding.
+    mask: img-like
+        If not None. Will apply this masks in the end of the process.
 
     thr: float
         The threshold value.
 
-    mask: img-like
-        Will apply this masks in the end of the process.
+    zscore: bool
+        If True will calculate the z-score of the ICC before thresholding.
+
+    mode: str
+        Choices: '+' for positive threshold,
+                 '+-' for positive and negative threshold and
+                 '-' for negative threshold.
 
     Returns
     -------
@@ -207,9 +240,9 @@ def filter_icc(icc, thr, zscore, mask):
         Thresholded and masked ICC.
     """
     if zscore:
-        icc_filt = spatial_map(icc, thr=thr)
+        icc_filt = thr_img(icc_img_to_zscore(icc), thr=thr, mode=mode)
     else:
-        icc_filt = thr_img(icc, thr=thr)
+        icc_filt = thr_img(icc, thr=thr, mode=mode)
 
     if mask is not None:
         icc_filt = apply_mask(icc_filt, mask)
