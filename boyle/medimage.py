@@ -19,7 +19,6 @@ from   .files.names         import get_extension
 
 from   .nifti.neuroimage    import NiftiImage
 from   .mhd.read            import load_raw_data_with_mhd, check_mhd_img
-from   .mha.read            import
 
 from   .nifti.check         import check_img, check_img_compatibility, repr_imgs
 from   .mask                import load_mask, _apply_mask_to_4d_data, vector_to_volume, matrix_to_4dvolume

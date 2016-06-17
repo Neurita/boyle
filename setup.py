@@ -50,9 +50,9 @@ setup_dict = dict(
 
     packages=find_packages(),
 
-    setup_requires=['numpy', 'scipy', 'nibabel', 'pydicom'],
+    install_requires=['numpy', 'scipy', 'nibabel', 'pydicom'],
 
-    scripts=[glob(op.join('scripts', '*')),],
+    scripts=glob(op.join('scripts', '*')),
 
     long_description=read('README.rst', 'CHANGES.rst'),
 
