@@ -18,7 +18,6 @@ from   collections   import defaultdict
 import pydicom as dicom
 from   pydicom.dataset import FileDataset
 
-from ..commands import call_command
 from ..files.search import get_all_files, recursive_glob
 
 
@@ -56,16 +55,10 @@ class DicomFile(FileDataset):
     """
     def __init__(self, file_path, preamble=None, file_meta=None,
                  is_implicit_VR=True, is_little_endian=True):
-        try:
-            dcm = dicom.read_file(file_path, force=True)
-
-            FileDataset.__init__(self, file_path, dcm, preamble, file_meta,
-                                 is_implicit_VR, is_little_endian)
-
-            self.file_path = op.abspath(file_path)
-
-        except Exception as exc:
-            raise Exception('Error reading file {0}.'.format(file_path)) from exc
+        dcm = dicom.read_file(file_path, force=True)
+        super(DicomFile, self).__init__(file_path, dcm, preamble, file_meta,
+                                        is_implicit_VR, is_little_endian)
+        self.file_path = op.abspath(file_path)
 
     def get_attributes(self, attributes, default=''):
         """Return the attributes values from this DicomFile
