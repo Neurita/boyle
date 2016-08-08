@@ -165,7 +165,7 @@ class LevenshteinDicomFileDistance(SimpleDicomFileDistance):
             return np.inf
 
         if len(self.field_weights) == 0:
-            log.exception('Field weights are not set.')
+            raise ValueError('Field weights should be set.')
 
         field_weights = self.field_weights.copy()
 
@@ -177,16 +177,14 @@ class LevenshteinDicomFileDistance(SimpleDicomFileDistance):
                 str1 = str(getattr(self.dcmf1, field_name))
             except AttributeError:
                 log.exception('Error reading attribute {} from '
-                              'file {}'.format(field_name,
-                                               self.dcmf1.file_path))
+                              'file {}'.format(field_name, self.dcmf1.file_path))
                 field_weights.pop(field_name, '')
 
             try:
                 str2 = str(getattr(self.dcmf2, field_name))
             except AttributeError:
                 log.exception('Error reading attribute {} from '
-                              'file {}'.format(field_name,
-                                               self.dcmf2.file_path))
+                              'file {}'.format(field_name, self.dcmf2.file_path))
                 field_weights.pop(field_name, '')
 
             if not str1 or not str2:
@@ -196,16 +194,11 @@ class LevenshteinDicomFileDistance(SimpleDicomFileDistance):
             if sum_weights == 0:
                 return 1
 
-            try:
-                simil = self.similarity_measure(str1, str2) if str1 != str2 else 1
+            simil = self.similarity_measure(str1, str2) if str1 != str2 else 1
 
-                if simil > 0:
-                    weight = self.field_weights[field_name]
-                    dist += (1-simil) * (weight/sum_weights)
-
-            except Exception:
-                log.exception('Error calculating DICOM file distance.')
-                raise
+            if simil > 0:
+                weight = self.field_weights[field_name]
+                dist += (1-simil) * (weight/sum_weights)
 
         if len(field_weights) == 0:
             return 1
@@ -273,19 +266,10 @@ def copy_groups_to_folder(dicom_groups, folder_path, groupby_field_name):
      DICOM field name. Will get the value of this field to name the group
      folder.
     """
-    def create_folder(path):
-        if not os.path.exists(path):
-            try:
-                os.mkdir(path)
-            except Exception:
-                log.exception('Error creating folder for '
-                              'DicomFilesClustering')
-                raise
-
     if dicom_groups is None or not dicom_groups:
         raise ValueError('Expected a boyle.dicom.sets.DicomFileSet.')
 
-    create_folder(folder_path)
+    os.makedirs(folder_path, exist_ok=False)
 
     for dcmg in dicom_groups:
         if groupby_field_name is not None and len(groupby_field_name) > 0:
@@ -295,23 +279,18 @@ def copy_groups_to_folder(dicom_groups, folder_path, groupby_field_name):
             dir_name = os.path.basename(dcmg)
 
         group_folder = os.path.join(folder_path, dir_name)
-        create_folder(group_folder)
+        os.makedirs(group_folder, exist_ok=False)
 
         log.debug('Copying files to {}.'.format(group_folder))
 
         import shutil
         dcm_files = dicom_groups[dcmg]
-        try:
-            for srcf in dcm_files:
-                destf = os.path.join(group_folder, os.path.basename(srcf))
-                while os.path.exists(destf):
-                    destf += '+'
-                shutil.copyfile(srcf, destf)
-        except Exception:
-            msg = 'Error copying file {} to {}'.format(srcf, group_folder)
-            print(msg)
-            log.exception(msg)
-            raise
+
+        for srcf in dcm_files:
+            destf = os.path.join(group_folder, os.path.basename(srcf))
+            while os.path.exists(destf):
+                destf += '+'
+            shutil.copy2(srcf, destf)
 
 
 def calculate_file_distances(dicom_files, field_weights=None,
@@ -424,12 +403,10 @@ class DicomFilesClustering(object):
         elif isinstance(header_fields, dict):
             self.headers = tuple(header_fields.keys())
         else:
-            msg = 'header_fields parameter is neither list, tuple or dict'
-            log.error(msg)
-            raise ValueError(msg)
+            raise ValueError('Expected `header_fields` parameter to be either list, tuple or dict. '
+                             'Got {}.'.format(type(header_fields)))
 
         self.dicom_groups = group_dicom_files(self._dicoms.items, self.headers)
-
 
     def levenshtein_analysis(self, field_weights=None):
         """
@@ -446,10 +423,8 @@ class DicomFilesClustering(object):
         """
         if field_weights is None:
             if not isinstance(self.field_weights, dict):
-                msg = 'Expected a dict for field_weights parameter, ' \
-                      'got {}'.format(type(self.field_weights))
-                log.error(msg)
-                raise ValueError(msg)
+                raise ValueError('Expected a dict for `field_weights` parameter, '
+                                 'got {}'.format(type(self.field_weights)))
 
         key_dicoms = list(self.dicom_groups.keys())
         file_dists = calculate_file_distances(key_dicoms, field_weights, self._dist_method_cls)
@@ -559,8 +534,7 @@ class DicomFilesClustering(object):
                                          pop_later=True, copy=True)
             self.dicom_groups = merged
         except IndexError:
-            log.exception('Index out of range to merge DICOM groups.')
-            return None
+            raise IndexError('Index out of range to merge DICOM groups.')
 
     def move_to_folder(self, folder_path, groupby_field_name=None):
         """Copy the file groups to folder_path. Each group will be copied into
@@ -577,9 +551,8 @@ class DicomFilesClustering(object):
         """
         try:
             copy_groups_to_folder(self.dicom_groups, folder_path, groupby_field_name)
-        except:
-            log.exception('Error moving dicom groups to {}.'.format(folder_path))
-            raise
+        except IOError as ioe:
+            raise IOError('Error moving dicom groups to {}.'.format(folder_path)) from ioe
 
     def get_unique_field_values_per_group(self, field_name,
                                           field_to_use_as_key=None):
@@ -608,10 +581,10 @@ class DicomFilesClustering(object):
                 if field_to_use_as_key is not None:
                     try:
                         key_val = str(DicomFile(dcmg).get_attributes(field_to_use_as_key))
-                    except Exception:
-                        log.exception('Error getting field {} from '
+                    except KeyError as ke:
+                        raise KeyError('Error getting field {} from '
                                       'file {}'.format(field_to_use_as_key,
-                                                       dcmg))
+                                                       dcmg)) from ke
                 unique_vals[key_val].add(field_val)
 
         return unique_vals

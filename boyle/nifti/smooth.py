@@ -122,7 +122,7 @@ def _smooth_data_array(arr, affine, fwhm, copy=True):
         for n, s in enumerate(sigma):
             ndimage.gaussian_filter1d(arr, s, output=arr, axis=n)
     except:
-        raise ValueError('')
+        raise ValueError('Error smoothing the array.')
     else:
         return arr
 

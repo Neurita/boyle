@@ -107,12 +107,11 @@ def get_unique_field_values(dcm_file_list, field_name):
     Set of field values
     """
     field_values = set()
-    try:
-        for dcm in dcm_file_list:
-            field_values.add(str(DicomFile(dcm).get_attributes(field_name)))
-        return field_values
-    except Exception as exc:
-        raise Exception('Error reading file {}'.format(dcm)) from exc
+
+    for dcm in dcm_file_list:
+        field_values.add(str(DicomFile(dcm).get_attributes(field_name)))
+
+    return field_values
 
 
 def find_all_dicom_files(root_path):
@@ -130,13 +129,13 @@ def find_all_dicom_files(root_path):
     Set of DICOM absolute file paths
     """
     dicoms = set()
-    f = None
+
     try:
         for fpath in get_all_files(root_path):
             if is_dicom_file(fpath):
                 dicoms.add(fpath)
-    except Exception as exc:
-        raise Exception('Error reading file {0}.'.format(fpath)) from exc
+    except IOError as ioe:
+        raise IOError('Error reading file {0}.'.format(fpath)) from ioe
 
     return dicoms
 
@@ -153,7 +152,7 @@ def is_dicom_file(filepath):
     :return: bool
     """
     if not os.path.exists(filepath):
-        return False
+        raise IOError('File {} not found.'.format(filepath))
 
     filename = os.path.basename(filepath)
     if filename == 'DICOMDIR':
@@ -191,8 +190,8 @@ def group_dicom_files(dicom_paths, hdr_field='PatientID'):
             hdr = dicom.read_file(dcm)
             group_key = getattr(hdr, hdr_field)
             dicom_groups[group_key].append(dcm)
-    except Exception as exc:
-        raise Exception('Error reading file {0}.'.format(dcm)) from exc
+    except KeyError as ke:
+        raise KeyError('Error reading field {} from file {}.'.format(hdr_field, dcm)) from ke
 
     return dicom_groups
 

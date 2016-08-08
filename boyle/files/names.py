@@ -11,16 +11,12 @@
 
 import os
 import os.path as op
-import sys
 import tempfile
 import numpy as np
-import logging
 import subprocess
 
 from ..config import ALLOWED_EXTS
 from ..exceptions import FolderNotFound
-
-log = logging.getLogger(__name__)
 
 
 def get_abspath(folderpath):
@@ -57,7 +53,7 @@ def get_extension(filepath, check_if_exists=False, allowed_exts=ALLOWED_EXTS):
     allowed_exts: dict
     Dictionary of strings, where the key if the last part of a complex ('.' separated) extension
     and the value is the previous part.
-    For example: for the '.nii.gz' extension I would have a dict as {'.gz': '.nii'}
+    For example: for the '.nii.gz' extension I would have a dict as {'.gz': ['.nii',]}
 
     Returns
     -------
@@ -66,23 +62,16 @@ def get_extension(filepath, check_if_exists=False, allowed_exts=ALLOWED_EXTS):
     """
     if check_if_exists:
         if not op.exists(filepath):
-            err = 'File not found: ' + filepath
-            log.error(err)
-            raise IOError(err)
+            raise IOError('File not found: ' + filepath)
 
-    try:
-        rest, ext = op.splitext(filepath)
-        if ext in allowed_exts:
-            alloweds = allowed_exts[ext]
-            _, ext2 = op.splitext(rest)
-            if ext2 in alloweds:
-                ext = ext2 + ext
+    rest, ext = op.splitext(filepath)
+    if ext in allowed_exts:
+        alloweds = allowed_exts[ext]
+        _, ext2 = op.splitext(rest)
+        if ext2 in alloweds:
+            ext = ext2 + ext
 
-        return ext
-
-    except:
-        log.error("Unexpected error: ", sys.exc_info()[0])
-        raise
+    return ext
 
 
 def add_extension_if_needed(filepath, ext, check_if_exists=False):
@@ -107,9 +96,7 @@ def add_extension_if_needed(filepath, ext, check_if_exists=False):
 
     if check_if_exists:
         if not op.exists(filepath):
-            err = 'File not found: ' + filepath
-            log.error(err)
-            raise IOError(err)
+            raise IOError('File not found: ' + filepath)
 
     return filepath
 
@@ -139,16 +126,8 @@ def write_lines(filepath, lines):
 
     lines: list of str
     """
-    try:
-        f = open(filepath, 'w')
+    with open(filepath, 'w') as f:
         f.writelines(lines)
-        f.close()
-    except IOError as err:
-        log.error('Unexpected error: ', err)
-        raise
-    except:
-        log.error('Unexpected error: ', str(sys.exc_info()))
-        raise
 
 
 def grep_one(srch_str, filepath):
@@ -202,24 +181,20 @@ def parse_subjects_list(filepath, datadir='', split=':', labelsf=None):
     if datadir:
         datadir += op.sep
 
-    try:
-        with open(filepath, 'r') as f:
-            for s in f:
-                line = s.strip().split(split)
-                if len(line) == 2:
-                    labels.append(np.float(line[1]))
-                    subjf = line[0].strip()
-                else:
-                    subjf = line.strip()
+    with open(filepath, 'r') as f:
+        for s in f:
+            line = s.strip().split(split)
+            if len(line) == 2:
+                labels.append(np.float(line[1]))
+                subjf = line[0].strip()
+            else:
+                subjf = line.strip()
 
-                if not op.isabs(subjf):
-                    subjs.append(datadir + subjf)
-                else:
-                    subjs.append(subjf)
+            if not op.isabs(subjf):
+                subjs.append(datadir + subjf)
+            else:
+                subjs.append(subjf)
 
-    except:
-        log.error("Unexpected error: ", sys.exc_info()[0])
-        raise
 
     if labelsf is not None:
         labels = np.loadtxt(labelsf)
@@ -245,10 +220,13 @@ def create_subjects_file(filelist, labels, output_file, split=':'):
     Split character for each line
 
     """
+    if len(filelist) != len(labels):
+        raise ValueError('Expected `filelist` and `labels` to have the same length.'
+                         'Got {} and {}.'.format(len(filelist), len(labels)))
+
     lines = []
-    for s in range(len(filelist)):
-        subj = filelist[s]
-        lab  = labels[s]
+    for i, subj in enumerate(filelist):
+        lab  = labels[i]
         line = subj + split + str(lab)
         lines.append(line)
 
@@ -278,25 +256,17 @@ def remove_all(filelist, folder=''):
     Parameters
     ----------
     filelist: list of str
-    List of the file paths to be removed
+        List of the file paths to be removed
 
     folder: str
-    Path to be used as common directory for all file paths in filelist
+        Path to be used as common directory for all file paths in filelist
     """
-    if folder:
-        try:
-            for f in filelist:
-                os.remove(f)
-        except OSError as err:
-            log.error(err)
-            pass
+    if not folder:
+        for f in filelist:
+            os.remove(f)
     else:
-        try:
-            for f in filelist:
-                os.remove(op.join(folder, f))
-        except OSError as err:
-            log.error(err)
-            pass
+        for f in filelist:
+            os.remove(op.join(folder, f))
 
 
 def get_folder_subpath(path, folder_depth):
@@ -321,7 +291,7 @@ def get_folder_subpath(path, folder_depth):
     if path[0] == op.sep:
         folder_depth += 1
 
-    return '/'.join(path.split('/')[0:folder_depth])
+    return op.sep.join(path.split(op.sep)[0:folder_depth])
 
 
 def get_temp_file(dirpath=None, suffix='.nii.gz'):
@@ -400,7 +370,6 @@ def ux_file_len(filepath):
     result, err = p.communicate()
 
     if p.returncode != 0:
-        log.error(err)
         raise IOError(err)
 
     l = result.strip()

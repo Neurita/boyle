@@ -12,9 +12,9 @@
 #-------------------------------------------------------------------------------
 
 import os.path as op
-import logging as log
 from collections import OrderedDict
 
+import numpy as np
 
 try:
     import h5py
@@ -54,34 +54,29 @@ def save_variables_to_hdf5(file_path, variables, mode='w', h5path='/'):
     h5file  = h5py.File(file_path, mode=mode)
     h5group = h5file.require_group(h5path)
 
-    try:
-        for vn in variables:
-            data = variables[vn]
+    for vn in variables:
+        data = variables[vn]
 
-            # fix for string numpy arrays
-            if hasattr(data, 'dtype') and (data.dtype.type is np.string_ or data.dtype.type is np.unicode_):
-                dt   = h5py.special_dtype(vlen=str)
-                data = data.astype(dt)
+        # fix for string numpy arrays
+        if hasattr(data, 'dtype') and (data.dtype.type is np.string_ or data.dtype.type is np.unicode_):
+            dt   = h5py.special_dtype(vlen=str)
+            data = data.astype(dt)
 
-            if isinstance(data, dict):
-                for key in data:
-                    #h5group.create_dataset(str(key))
-                    #import ipdb
-                    #ipdb.set_trace()
-                    h5group[str(key)] = data[key]
+        if isinstance(data, dict):
+            for key in data:
+                #h5group.create_dataset(str(key))
+                #import ipdb
+                #ipdb.set_trace()
+                h5group[str(key)] = data[key]
 
-            elif isinstance(data, list):
-                for idx, item in enumerate(data):
-                    #h5group.create_dataset(str(idx))
-                    h5group[str(idx)] = item
-            else:
-                h5group[vn] = data
-    except:
-        log.exception('Error saving {0} in {1}/{2}'.format(vn, file_path, h5path))
-        raise
-    finally:
-        h5file.close()
+        elif isinstance(data, list):
+            for idx, item in enumerate(data):
+                #h5group.create_dataset(str(idx))
+                h5group[str(idx)] = item
+        else:
+            h5group[vn] = data
 
+    h5file.close()
 
 
 # -------------------------------------------------------------------------

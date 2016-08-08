@@ -4,7 +4,7 @@ import os
 import baker
 from path import path
 
-from boyle.scriptutils import whoami
+from boyle.commands import whoami
 from boyle.exceptions import *
 from boyle.files.file_tree_map import FileTreeMapError
 
@@ -49,7 +49,7 @@ def copy(configfile='', destpath='', overwrite=False, sub_node=''):
         log.info('Creating folder {0}'.format(destpath))
         path(destpath).makedirs_p()
 
-    from macuto.files.file_tree_map import FileTreeMap
+    from boyle.files.file_tree_map import FileTreeMap
     file_map = FileTreeMap()
 
     try:

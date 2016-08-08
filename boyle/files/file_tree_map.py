@@ -1,4 +1,5 @@
 import os
+import shutil
 import os.path as op
 import fnmatch
 import logging
@@ -6,8 +7,9 @@ import logging
 from functools import reduce
 from collections import OrderedDict
 
-from ..strings import (match_list,
-                       is_valid_regex)
+from ..utils.strings import (match_list, is_fnmatch_regex, is_regex)
+from ..utils.imports import import_pyfile
+
 from ..exceptions import FolderNotFound
 from .names import get_extension
 
@@ -16,67 +18,6 @@ log = logging.getLogger(__name__)
 
 class FileTreeMapError(Exception):
     pass
-
-
-def import_pyfile(filepath, mod_name=None):
-    """
-    Imports the contents of filepath as a Python module.
-
-    :param filepath: string
-
-    :param mod_name: string
-    Name of the module when imported
-
-    :return: module
-    Imported module
-    """
-    import sys
-    if sys.version_info.major == 3:
-        import importlib.machinery
-        loader = importlib.machinery.SourceFileLoader('', filepath)
-        mod = loader.load_module(mod_name)
-    else:
-        import imp
-        mod = imp.load_source(mod_name, filepath)
-
-    return mod
-
-
-def is_regex(string):
-    """
-    TODO: improve this!
-
-    Returns True if the given string is considered a regular expression,
-    False otherwise.
-    It will be considered a regex if starts with a non alphabetic character
-    and then correctly compiled by re.compile
-
-    :param string: str
-
-    """
-    is_regex = False
-    regex_chars = ['\\', '(', '+', '^', '$']
-    for c in regex_chars:
-        if string.find(c) > -1:
-            return is_valid_regex(string)
-    return is_regex
-
-
-def is_fnmatch_regex(string):
-    """
-    Returns True if the given string is considered a fnmatch 
-    regular expression, False otherwise.
-    It will look for 
-
-    :param string: str
-
-    """
-    is_regex = False
-    regex_chars = ['!', '*', '$']
-    for c in regex_chars:
-        if string.find(c) > -1:
-            return True
-    return is_regex
 
 
 def filter_list(lst, pattern):
@@ -166,7 +107,7 @@ def get_possible_paths(base_path, path_regex):
     Looks for path_regex within base_path. Each match is append
     in the returned list.
     path_regex may contain subfolder structure.
-    If any part of the folder structure is a 
+    If any part of the folder structure is a
 
     :param base_path: str
 
@@ -343,7 +284,6 @@ class FileTreeMap(object):
 
         :param verbose: bool
         """
-
         assert(op.isfile(config_file))
 
         self.__init__()
@@ -351,7 +291,7 @@ class FileTreeMap(object):
             self._basepath, self._treemap = self._import_config(config_file)
             self.update(verbose)
         except Exception as exc:
-            log.exception('Error reading config file.')
+            raise EnvironmentError('Error reading config file {}.'.format(config_file)) from exc
 
     def from_dict(self, root_path, filetree, verbose=False):
         """
@@ -367,15 +307,12 @@ class FileTreeMap(object):
     def update(self, verbose=False):
         """
         """
-        try:
-            self._check_basic_config()
-            self._filetree = populate_subtree(self._basepath,
-                                              self._treemap,
-                                              verbose)
-
+        self._check_basic_config()
+        self._filetree = populate_subtree(self._basepath,
+                                          self._treemap,
+                                          verbose)
+        if verbose:
             log.info('FileTreeMap created: \n {0}.'.format(str(self)))
-        except Exception as e:
-            log.exception('Error updating file tree.')
 
     def _check_basic_config(self):
         """
@@ -387,11 +324,13 @@ class FileTreeMap(object):
 
     @staticmethod
     def create_folder(dirpath, overwrite=False):
+        """ Will create dirpath folder. If dirpath already exists and overwrite is False,
+        will append a '+' suffix to dirpath until dirpath does not exist."""
         if not overwrite:
             while op.exists(dirpath):
                 dirpath += '+'
 
-        path(dirpath).mkdir_p()
+        os.makedirs(dirpath, exist_ok=overwrite)
         return dirpath
 
     @staticmethod

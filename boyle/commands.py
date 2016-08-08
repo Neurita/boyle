@@ -157,11 +157,9 @@ def condor_submit(cmd):
     int
         returncode value from calling the submission command.
     """
-    try:
-        is_running = subprocess.call('condor_status', shell=True) == 0
-    except Exception as exc:
-        log.exception('Could not find a running instance of HTCondor.')
-        raise
+    is_running = subprocess.call('condor_status', shell=True) == 0
+    if not is_running:
+        raise CalledProcessError('HTCondor is not running.')
 
     sub_cmd = 'condor_qsub -shell n -b y -r y -N ' \
               + cmd.split()[0] + ' -m n'

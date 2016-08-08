@@ -10,7 +10,6 @@
 # -------------------------------------------------------------------------------
 
 
-import logging
 import numpy            as np
 import scipy.ndimage    as scn
 from   collections      import OrderedDict
@@ -19,9 +18,6 @@ from   .check           import check_img_compatibility, repr_imgs, check_img
 from   .read            import read_img, get_img_data, get_img_info
 from   .mask            import binarise, load_mask
 from   ..utils.strings  import search_list
-
-
-log = logging.getLogger(__name__)
 
 
 def drain_rois(img):
@@ -233,11 +229,7 @@ def partition_timeseries(image, roi_img, mask_img=None, zeroe=True, roi_values=N
     rois = read_img(roi_img)
 
     # check if roi_img and image are compatible
-    try:
-        check_img_compatibility(img, rois, only_check_3d=True)
-    except:
-        log.error('Given image and ROIs image are not compatible.')
-        raise
+    check_img_compatibility(img, rois, only_check_3d=True)
 
     # check if rois has all roi_values
     roi_data = rois.get_data()
@@ -253,12 +245,8 @@ def partition_timeseries(image, roi_img, mask_img=None, zeroe=True, roi_values=N
         mask_data = None
     else:
         mask = load_mask(mask_img)
-        try:
-            check_img_compatibility(img, mask, only_check_3d=True)
-        except Exception as exc:
-            raise Exception('Given image and mask image are not compatible. \n {}'.format(str(exc)))
-        else:
-            mask_data = mask.get_data()
+        check_img_compatibility(img, mask, only_check_3d=True)
+        mask_data = mask.get_data()
 
     # choose function to call
     if outdict:
@@ -276,16 +264,18 @@ def partition_timeseries(image, roi_img, mask_img=None, zeroe=True, roi_values=N
 
 def _check_for_partition(datavol, roivol, maskvol=None):
     if datavol.ndim != 4 and datavol.ndim != 3:
-        raise ValueError('Expected a volume with 3 or 4 dimensions. datavol has {} dimensions.'.format(datavol.ndim))
+        raise AttributeError('Expected a volume with 3 or 4 dimensions. '
+                             '`datavol` has {} dimensions.'.format(datavol.ndim))
 
     if datavol.shape[:3] != roivol.shape:
-        raise ValueError('Expected a ROI volume with the same 3D shape as the timeseries volume. '
-                         'In this case, datavol has shape {} and roivol {}.'.format(datavol.shape, roivol.shape))
+        raise AttributeError('Expected a ROI volume with the same 3D shape as the timeseries volume. '
+                             'In this case, datavol has shape {} and roivol {}.'.format(datavol.shape, roivol.shape))
 
     if maskvol is not None:
         if datavol.shape[:3] != maskvol.shape:
-            raise ValueError('Expected a mask volume with the same 3D shape as the timeseries volume. '
-                             'In this case, datavol has shape {} and maskvol {}.'.format(datavol.shape, maskvol.shape))
+            raise AttributeError('Expected a mask volume with the same 3D shape as the timeseries volume. '
+                                 'In this case, datavol has shape {} and maskvol {}.'.format(datavol.shape,
+                                                                                             maskvol.shape))
 
 
 def _partition_data(datavol, roivol, roivalue, maskvol=None, zeroe=True):
@@ -450,14 +440,11 @@ def get_3D_from_4D(image, vol_idx=0):
     hdr, aff = get_img_info(img)
 
     if len(img.shape) != 4:
-        msg = 'Volume in {} does not have 4 dimensions.'.format(repr_imgs(img))
-        log.error(msg)
-        raise ValueError(msg)
+        raise AttributeError('Volume in {} does not have 4 dimensions.'.format(repr_imgs(img)))
 
     if not 0 <= vol_idx < img.shape[3]:
-        msg = 'IndexError: 4th dimension in volume {} has {} volumes, not {}.'.format(repr_imgs(img), img.shape[3], vol_idx)
-        log.error(msg)
-        raise IndexError(msg)
+        raise IndexError('IndexError: 4th dimension in volume {} has {} volumes, '
+                         'not {}.'.format(repr_imgs(img), img.shape[3], vol_idx))
 
     img_data = img.get_data()
     new_vol  = img_data[:, :, :, vol_idx].copy()

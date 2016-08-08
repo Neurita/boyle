@@ -19,16 +19,12 @@ class DicomFileSet(ItemSet):
     def __init__(self, folders=None):
         """
         :param folders: str or list of strs
-        Path or paths to folders to be searched for Dicom files
+            Path or paths to folders to be searched for Dicom files
         """
         self.items = []
 
         if folders is not None:
-            try:
-                self._store_dicom_paths(folders)
-            except FolderNotFound:
-                log.exception('Error storing dicom file paths.')
-                raise
+            self._store_dicom_paths(folders)
 
     def _store_dicom_paths(self, folders):
         """Search for dicoms in folders and save file paths into
@@ -164,14 +160,13 @@ class DicomGenericSet(DicomFileSet):
         This function has only one parameter: file_path
         """
         if not store_metadata:
-            build_dcm = lambda fpath: fpath
+            return lambda fpath: fpath
+
+        if header_fields is None:
+            build_dcm = lambda fpath: DicomFile(fpath)
         else:
-            if header_fields is None:
-                build_dcm = lambda fpath: DicomFile(fpath)
-            else:
-                dicom_header = namedtuple('DicomHeader', header_fields)
-                build_dcm = lambda fpath: dicom_header.\
-                    _make(DicomFile(fpath).get_attributes(header_fields))
+            dicom_header = namedtuple('DicomHeader', header_fields)
+            build_dcm = lambda fpath: dicom_header._make(DicomFile(fpath).get_attributes(header_fields))
 
         return build_dcm
 
@@ -183,10 +178,8 @@ class DicomGenericSet(DicomFileSet):
         try:
             for dcmf in self.items:
                 yield self.read_dcm(dcmf)
-        except Exception as exc:
-            log.exception('Error reading DICOM file: {} '
-                          '\n {}'.format(dcmf, str(exc)))
-            raise
+        except IOError as ioe:
+            raise IOError('Error reading DICOM file: {}.'.format(dcmf)) from ioe
 
     # def scrape_dicom_pairs(self):
     #     """
@@ -215,10 +208,7 @@ class DicomGenericSet(DicomFileSet):
         if hasattr(self.items, '__getitem__'):
             return self.read_dcm(self.items[item])
         else:
-            msg = 'ItemSet has no __get_item__ implemented'
-            log.exception(msg)
-            raise NotImplementedError(msg)
-
+            raise AttributeError('ItemSet has no __get_item__ implemented.')
 
 # def batch(input_folder, output_folder, header_field='PatientID',
 #           overwrite=False):
@@ -279,28 +269,23 @@ def create_dicom_subject_folders(out_path, dicom_sets):
     """
     import shutil
 
-    try:
-        if not os.path.exists(out_path):
-            os.mkdir(out_path)
+    if not os.path.exists(out_path):
+        os.mkdir(out_path)
 
-        new_groups = defaultdict(list)
-        for group in dicom_sets:
-            group_path = os.path.join(out_path, str(group))
-            os.mkdir(group_path)
+    new_groups = defaultdict(list)
+    for group in dicom_sets:
+        group_path = os.path.join(out_path, str(group))
+        os.mkdir(group_path)
 
-            group_dicoms = dicom_sets[group]
-            for idx, dcm in enumerate(group_dicoms):
-                num = str(idx).zfill(5)
-                new_dcm = os.path.join(group_path, num + DICOM_FILE_EXTENSIONS[0].lower())
-                log.info('Copying {0} -> {1}'.format(dcm, new_dcm))
-                shutil.copyfile(dcm, new_dcm)
-                new_groups[group].append(new_dcm)
+        group_dicoms = dicom_sets[group]
+        for idx, dcm in enumerate(group_dicoms):
+            num = str(idx).zfill(5)
+            new_dcm = os.path.join(group_path, num + DICOM_FILE_EXTENSIONS[0].lower())
+            log.info('Copying {0} -> {1}'.format(dcm, new_dcm))
+            shutil.copyfile(dcm, new_dcm)
+            new_groups[group].append(new_dcm)
 
-        return new_groups
-
-    except:
-        log.exception('Creating DICOM subject folders.')
-        raise
+    return new_groups
 
 
 def rename_file_group_to_serial_nums(file_lst):

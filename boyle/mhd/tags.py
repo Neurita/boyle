@@ -35,15 +35,14 @@ MHD_TAGS = ['ObjectType',
             'StudyTime']
 
 
-MHD_TO_NUMPY_TYPE   = {'MET_FLOAT' : np.float,
-                       'MET_UCHAR' : np.uint8,
+MHD_TO_NUMPY_TYPE   = {'MET_UCHAR' : np.uint8,
                        'MET_CHAR'  : np.int8,
                        'MET_USHORT': np.uint8,
                        'MET_SHORT' : np.int8,
                        'MET_UINT'  : np.uint32,
                        'MET_INT'   : np.int32,
                        'MET_ULONG' : np.uint64,
-                       'MET_ULONG' : np.int64,
+                       'MET_LONG'  : np.int64,
                        'MET_FLOAT' : np.float32,
                        'MET_DOUBLE': np.float64}
 

@@ -9,7 +9,6 @@
 # Use this at your own risk!
 # -------------------------------------------------------------------------------
 
-import logging
 import warnings
 import os.path          as      op
 from   six              import  string_types
@@ -19,8 +18,6 @@ from   ..nifti.check    import  is_img
 
 from   ..files.names    import  get_extension
 from   ..exceptions     import  FileNotFound
-
-log = logging.getLogger(__name__)
 
 
 def check_mhd_img(image, make_it_3d=False):
@@ -54,16 +51,11 @@ def check_mhd_img(image, make_it_3d=False):
         if not 'mhd' in ext:
             warnings.warn('Expecting a filepath with `.mhd` extension, got {}.'.format(image))
 
-        try:
-            img, hdr = load_raw_data_with_mhd(image)
-            if make_it_3d:
-                img = _make_it_3d(img)
-        except:
-            log.exception('Error loading image file {}.'.format(image))
-            raise
-        else:
-            # TODO: add hdr as metadata to the img volume
-            return img
+        img, hdr = load_raw_data_with_mhd(image)
+        if make_it_3d:
+            img = _make_it_3d(img)
+
+        return img
 
     elif is_img(image):
         return image
@@ -88,11 +80,13 @@ def _make_it_3d(img):
     3D numpy ndarray object
     """
     shape = img.shape
+
     if len(shape) == 3:
         return img
 
-    elif (len(shape) == 4 and shape[3] == 1):
+    elif len(shape) == 4 and shape[3] == 1:
         # "squeeze" the image.
         return img[:, :, :, 0]
+
     else:
         raise TypeError('A 3D image is expected, but an image with a shape of {} was given.'.format(shape))

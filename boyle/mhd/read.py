@@ -10,16 +10,11 @@
 # -------------------------------------------------------------------------------
 
 import array
-import logging
 import os.path      as      op
 import numpy        as      np
 from   functools    import  reduce
-from   six          import  string_types
 
 from   .tags        import  MHD_TAGS, MHD_TO_NUMPY_TYPE, NDARRAY_TO_ARRAY_TYPE
-from   ..exceptions import  FileNotFound
-
-log = logging.getLogger(__name__)
 
 
 def _read_meta_header(filename):
@@ -74,7 +69,7 @@ def load_raw_data_with_mhd(filename):
     meta_dict = _read_meta_header(filename)
     dim       = int(meta_dict['NDims'])
 
-    assert(meta_dict['ElementType'] in MHD_TO_NUMPY_TYPE)
+    assert (meta_dict['ElementType'] in MHD_TO_NUMPY_TYPE)
 
     arr = [int(i) for i in meta_dict['DimSize'].split()]
     volume = reduce(lambda x, y: x*y, arr[0:dim-1], 1)
@@ -126,12 +121,12 @@ def get_3D_from_4D(filename, vol_idx=0):
     vol, hdr = load_raw_data_with_mhd(filename)
 
     if vol.ndim != 4:
-        msg = 'Volume in {} does not have 4 dimensions.'.format(op.join(op.dirname(filename), hdr['ElementDataFile']))
-        raise ValueError(msg)
+        raise ValueError('Volume in {} does not have 4 dimensions.'.format(op.join(op.dirname(filename),
+                                                                                   hdr['ElementDataFile'])))
 
     if not 0 <= vol_idx < vol.shape[3]:
-        msg = 'IndexError: 4th dimension in volume {} has {} volumes, not {}.'.format(filename, vol.shape[3], vol_idx)
-        raise IndexError(msg)
+        raise IndexError('IndexError: 4th dimension in volume {} has {} volumes, not {}.'.format(filename,
+                                                                                                 vol.shape[3], vol_idx))
 
     new_vol = vol[:, :, :, vol_idx].copy()
 

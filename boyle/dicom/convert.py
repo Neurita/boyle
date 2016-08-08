@@ -124,12 +124,7 @@ def call_dcm2nii(work_dir, arguments=''):
 
     cmd_line = 'dcm2nii {0} "{1}"'.format(arguments, work_dir)
     log.info(cmd_line)
-    try:
-        out = subprocess.call(cmd_line, shell=True)
-    except Exception as exc:
-        raise IOError('Error calling `{}`'.format(cmd_line)) from exc
-    else:
-        return out
+    return subprocess.check_call(cmd_line, shell=True)
 
 
 def convert_dcm2nii(input_dir, output_dir, filename):

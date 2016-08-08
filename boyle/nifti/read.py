@@ -14,7 +14,6 @@ Nifti file access utilities.
 
 import os
 import copy
-import logging
 import operator
 import numpy   as np
 import nibabel as nib
@@ -25,8 +24,6 @@ from ..exceptions import FileNotFound
 from ..utils import as_ndarray
 from ..utils.compat import _basestring
 
-
-log = logging.getLogger(__name__)
 
 import warnings
 

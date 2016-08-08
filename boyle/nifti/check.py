@@ -128,7 +128,7 @@ def are_compatible_imgs(one_img, another_img):
     """
     try:
         check_img_compatibility(one_img, another_img)
-    except ValueError:
+    except :
         return False
     else:
         return True

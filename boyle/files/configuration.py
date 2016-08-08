@@ -23,21 +23,3 @@ class Configuration(object):
             if config_map[key] == 'None':
                 config_map[key] = None
             setattr(self, key, config_map[key])
-
-
-class Singleton(object):
-    """
-    Singleton class pattern
-    """
-    _instance = None
-
-    def __new__(cls, *args, **kwargs):
-        """
-        :param cls:
-        :param args:
-        :param kwargs:
-        :return:
-        """
-        if not cls._instance:
-            cls._instance = super(Singleton, cls).__new__(cls, *args, **kwargs)
-        return cls._instance
