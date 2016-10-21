@@ -103,7 +103,8 @@ def binarise(image, threshold=0):
 
     Returns
     -------
-    binarised img-like object
+    binarised_img: numpy.ndarray
+        Mask volume
     """
     img = check_img(image)
     return img.get_data() > threshold

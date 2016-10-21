@@ -9,7 +9,6 @@
 # Use this at your own risk!
 # -------------------------------------------------------------------------------
 
-
 import numpy            as np
 import scipy.ndimage    as scn
 from   collections      import OrderedDict
@@ -66,7 +65,7 @@ def largest_connected_component(volume):
     Parameters
     -----------
     volume: numpy.array
-        3D boolean array indicating a volume.
+        3D boolean array.
 
     Returns
     --------
@@ -75,15 +74,48 @@ def largest_connected_component(volume):
     """
     # We use asarray to be able to work with masked arrays.
     volume = np.asarray(volume)
-    labels, label_nb = scn.label(volume)
-    if not label_nb:
-        raise ValueError('No non-zero values: no connected components')
-    if label_nb == 1:
+    labels, num_labels = scn.label(volume)
+    if not num_labels:
+        raise ValueError('No non-zero values: no connected components found.')
+
+    if num_labels == 1:
         return volume.astype(np.bool)
+
     label_count = np.bincount(labels.ravel().astype(np.int))
     # discard the 0 label
     label_count[0] = 0
     return labels == label_count.argmax()
+
+
+def large_clusters_mask(volume, min_cluster_size):
+    """ Return as mask for `volume` that includes only areas where
+    the connected components have a size bigger than `min_cluster_size`
+    in number of voxels.
+
+    Parameters
+    -----------
+    volume: numpy.array
+        3D boolean array.
+
+    min_cluster_size: int
+        Minimum size in voxels that the connected component must have.
+
+    Returns
+    --------
+    volume: numpy.array
+        3D int array with a mask excluding small connected components.
+    """
+    labels, num_labels = scn.label(volume)
+
+    labels_to_keep = set([i for i in range(num_labels)
+                         if np.sum(labels == i) >= min_cluster_size])
+
+    clusters_mask = np.zeros_like(volume, dtype=int)
+    for l in range(num_labels):
+        if l in labels_to_keep:
+            clusters_mask[labels == l] = 1
+
+    return clusters_mask
 
 
 def create_rois_mask(roislist, filelist):
@@ -107,9 +139,11 @@ def create_rois_mask(roislist, filelist):
 
     for roi in roislist:
         try:
-            roifiles.append(search_list(roi, filelist)[0])
+            roi_file = search_list(roi, filelist)[0]
         except Exception as exc:
             raise Exception('Error creating list of roi files. \n {}'.format(str(exc)))
+        else:
+            roifiles.append(roi_file)
 
     return binarise(roifiles)
 
@@ -185,9 +219,6 @@ def get_rois_centers_of_mass(vol):
     return rois_centers
 
 
-# def partition_volume(image, roi_img, mask_img=None, zeroe=True, roi_values=None, outdict=False):
-
-
 def partition_timeseries(image, roi_img, mask_img=None, zeroe=True, roi_values=None, outdict=False):
     """Partition the timeseries in tsvol according to the ROIs in roivol.
     If a mask is given, will use it to exclude any voxel outside of it.
@@ -260,6 +291,11 @@ def partition_timeseries(image, roi_img, mask_img=None, zeroe=True, roi_values=N
                             roi_values=roi_values, zeroe=zeroe)
     except:
         raise
+
+
+def partition_volume(*args, **kwargs):
+    """ Look at partition_timeseries function docstring. """
+    return partition_timeseries(*args, **kwargs)
 
 
 def _check_for_partition(datavol, roivol, maskvol=None):
@@ -452,8 +488,3 @@ def get_3D_from_4D(image, vol_idx=0):
     hdr.set_data_shape(hdr.get_data_shape()[:3])
 
     return new_vol, hdr, aff
-
-
-def partition_volume(*args, **kwargs):
-    """ Look at partition_timeseries function docstring. """
-    return partition_timeseries(*args, **kwargs)
