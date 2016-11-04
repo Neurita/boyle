@@ -227,6 +227,8 @@ def partition_timeseries(image, roi_img, mask_img=None, zeroe=True, roi_values=N
     or a list of timeseries sets. If True and roi_img is not None will return an OrderedDict, if False
     or roi_img or roi_list is None will return a list.
 
+    Background value is assumed to be 0 and won't be used here.
+
     Parameters
     ----------
     image: img-like object or str
