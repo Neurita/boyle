@@ -5,23 +5,18 @@
 #Grupo de Inteligencia Computational <www.ehu.es/ccwintco>
 #Universidad del Pais Vasco UPV/EHU
 
-#License: 3-Clause BSD
-
 #2013, Alexandre Manhaes Savio
 #Use this at your own risk!
 #-------------------------------------------------------------------------------
 
 import os
 import h5py
+import warnings
 import tempfile
 import numpy as np
 import pandas as pd
 from pandas import HDFStore
 from itertools import product
-
-import logging
-
-log = logging.getLogger(__name__)
 
 
 class HdfDataBuffer(object):
@@ -145,17 +140,11 @@ class HdfDataBuffer(object):
         if ds_name in self._datasets:
             return self._datasets[ds_name]
 
-        try:
-            ds = self._group.create_dataset(ds_name, (1, 1), maxshape=None,
-                                            dtype=dtype)
-            self._datasets[ds_name] = ds
-            return ds
+        ds = self._group.create_dataset(ds_name, (1, 1), maxshape=None,
+                                        dtype=dtype)
+        self._datasets[ds_name] = ds
 
-        except ValueError as ve:
-            log.error('Error creating empty dataset '
-                      '{0} in {1}.'.format(ds_name, self._hdf_basepath))
-            log.error(ve)
-            raise
+        return ds
 
     def create_dataset(self, ds_name, data, attrs=None, dtype=None):
         """
@@ -172,30 +161,24 @@ class HdfDataBuffer(object):
 
         :return: h5py dataset
         """
-        try:
-            if ds_name in self._datasets:
-                ds = self._datasets[ds_name]
-                if ds.dtype != data.dtype:
-                    log.WARN('Dataset and data dtype are different!')
-            else:
-                if dtype is None:
-                    dtype = data.dtype
+        if ds_name in self._datasets:
+            ds = self._datasets[ds_name]
+            if ds.dtype != data.dtype:
+                warnings.warn('Dataset and data dtype are different!')
 
-                ds = self._group.create_dataset(ds_name, data.shape,
-                                                dtype=dtype)
+        else:
+            if dtype is None:
+                dtype = data.dtype
 
-                if attrs is not None:
-                    for key in attrs:
-                        setattr(ds.attrs, key, attrs[key])
+            ds = self._group.create_dataset(ds_name, data.shape,
+                                            dtype=dtype)
 
-            ds.read_direct(data)
-            self._datasets[ds_name] = ds
+            if attrs is not None:
+                for key in attrs:
+                    setattr(ds.attrs, key, attrs[key])
 
-        except ValueError as ve:
-            log.error('Error creating dataset '
-                      '{0} in {1}.'.format(ds_name, self._hdf_basepath))
-            log.error(ve)
-            raise
+        ds.read_direct(data)
+        self._datasets[ds_name] = ds
 
         return ds
 

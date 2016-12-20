@@ -9,8 +9,6 @@
 # Use this at your own risk!
 # -------------------------------------------------------------------------------
 
-
-import logging
 import numpy            as np
 import scipy.ndimage    as scn
 from   collections      import OrderedDict
@@ -19,9 +17,6 @@ from   .check           import check_img_compatibility, repr_imgs, check_img
 from   .read            import read_img, get_img_data, get_img_info
 from   .mask            import binarise, load_mask
 from   ..utils.strings  import search_list
-
-
-log = logging.getLogger(__name__)
 
 
 def drain_rois(img):
@@ -52,17 +47,6 @@ def drain_rois(img):
     krn_dim = [3] * img_data.ndim
     kernel  = np.ones(krn_dim, dtype=int)
 
-    # if img_data.ndim == 2:
-    #     kernel = np.ones([3, 3], dtype=int)
-    # elif img_data.ndim == 3:
-    #     kernel = np.ones([3, 3, 3], dtype=int)
-    # elif img_data.ndim == 4:
-    #     kernel = np.ones([3, 3, 3, 3], dtype=int)
-    # else:
-    #     msg = 'Could not build an erosion kernel for image {} with shape {}.'.format(repr_imgs(img),
-    #                                                                                  img_data.shape)
-    #     raise ValueError(msg)
-
     vals = np.unique(img_data)
     vals = vals[vals != 0]
 
@@ -81,7 +65,7 @@ def largest_connected_component(volume):
     Parameters
     -----------
     volume: numpy.array
-        3D boolean array indicating a volume.
+        3D boolean array.
 
     Returns
     --------
@@ -90,15 +74,48 @@ def largest_connected_component(volume):
     """
     # We use asarray to be able to work with masked arrays.
     volume = np.asarray(volume)
-    labels, label_nb = scn.label(volume)
-    if not label_nb:
-        raise ValueError('No non-zero values: no connected components')
-    if label_nb == 1:
+    labels, num_labels = scn.label(volume)
+    if not num_labels:
+        raise ValueError('No non-zero values: no connected components found.')
+
+    if num_labels == 1:
         return volume.astype(np.bool)
+
     label_count = np.bincount(labels.ravel().astype(np.int))
     # discard the 0 label
     label_count[0] = 0
     return labels == label_count.argmax()
+
+
+def large_clusters_mask(volume, min_cluster_size):
+    """ Return as mask for `volume` that includes only areas where
+    the connected components have a size bigger than `min_cluster_size`
+    in number of voxels.
+
+    Parameters
+    -----------
+    volume: numpy.array
+        3D boolean array.
+
+    min_cluster_size: int
+        Minimum size in voxels that the connected component must have.
+
+    Returns
+    --------
+    volume: numpy.array
+        3D int array with a mask excluding small connected components.
+    """
+    labels, num_labels = scn.label(volume)
+
+    labels_to_keep = set([i for i in range(num_labels)
+                         if np.sum(labels == i) >= min_cluster_size])
+
+    clusters_mask = np.zeros_like(volume, dtype=int)
+    for l in range(num_labels):
+        if l in labels_to_keep:
+            clusters_mask[labels == l] = 1
+
+    return clusters_mask
 
 
 def create_rois_mask(roislist, filelist):
@@ -122,9 +139,11 @@ def create_rois_mask(roislist, filelist):
 
     for roi in roislist:
         try:
-            roifiles.append(search_list(roi, filelist)[0])
+            roi_file = search_list(roi, filelist)[0]
         except Exception as exc:
-            raise Exception('Error creating list of roi files.') from exc
+            raise Exception('Error creating list of roi files. \n {}'.format(str(exc)))
+        else:
+            roifiles.append(roi_file)
 
     return binarise(roifiles)
 
@@ -200,9 +219,6 @@ def get_rois_centers_of_mass(vol):
     return rois_centers
 
 
-# def partition_volume(image, roi_img, mask_img=None, zeroe=True, roi_values=None, outdict=False):
-
-
 def partition_timeseries(image, roi_img, mask_img=None, zeroe=True, roi_values=None, outdict=False):
     """Partition the timeseries in tsvol according to the ROIs in roivol.
     If a mask is given, will use it to exclude any voxel outside of it.
@@ -210,6 +226,8 @@ def partition_timeseries(image, roi_img, mask_img=None, zeroe=True, roi_values=N
     The outdict indicates whether you want a dictionary for each set of timeseries keyed by the ROI value
     or a list of timeseries sets. If True and roi_img is not None will return an OrderedDict, if False
     or roi_img or roi_list is None will return a list.
+
+    Background value is assumed to be 0 and won't be used here.
 
     Parameters
     ----------
@@ -244,11 +262,7 @@ def partition_timeseries(image, roi_img, mask_img=None, zeroe=True, roi_values=N
     rois = read_img(roi_img)
 
     # check if roi_img and image are compatible
-    try:
-        check_img_compatibility(img, rois, only_check_3d=True)
-    except:
-        log.error('Given image and ROIs image are not compatible.')
-        raise
+    check_img_compatibility(img, rois, only_check_3d=True)
 
     # check if rois has all roi_values
     roi_data = rois.get_data()
@@ -264,13 +278,8 @@ def partition_timeseries(image, roi_img, mask_img=None, zeroe=True, roi_values=N
         mask_data = None
     else:
         mask = load_mask(mask_img)
-        try:
-            check_img_compatibility(img, mask, only_check_3d=True)
-        except Exception as exc:
-            raise Exception('Given image and mask image are not compatible.') from exc
-        else:
-            mask_data = mask.get_data()
-
+        check_img_compatibility(img, mask, only_check_3d=True)
+        mask_data = mask.get_data()
 
     # choose function to call
     if outdict:
@@ -286,18 +295,25 @@ def partition_timeseries(image, roi_img, mask_img=None, zeroe=True, roi_values=N
         raise
 
 
+def partition_volume(*args, **kwargs):
+    """ Look at partition_timeseries function docstring. """
+    return partition_timeseries(*args, **kwargs)
+
+
 def _check_for_partition(datavol, roivol, maskvol=None):
     if datavol.ndim != 4 and datavol.ndim != 3:
-        raise ValueError('Expected a volume with 3 or 4 dimensions. datavol has {} dimensions.'.format(datavol.ndim))
+        raise AttributeError('Expected a volume with 3 or 4 dimensions. '
+                             '`datavol` has {} dimensions.'.format(datavol.ndim))
 
     if datavol.shape[:3] != roivol.shape:
-        raise ValueError('Expected a ROI volume with the same 3D shape as the timeseries volume. '
-                         'In this case, datavol has shape {} and roivol {}.'.format(datavol.shape, roivol.shape))
+        raise AttributeError('Expected a ROI volume with the same 3D shape as the timeseries volume. '
+                             'In this case, datavol has shape {} and roivol {}.'.format(datavol.shape, roivol.shape))
 
     if maskvol is not None:
         if datavol.shape[:3] != maskvol.shape:
-            raise ValueError('Expected a mask volume with the same 3D shape as the timeseries volume. '
-                             'In this case, datavol has shape {} and maskvol {}.'.format(datavol.shape, maskvol.shape))
+            raise AttributeError('Expected a mask volume with the same 3D shape as the timeseries volume. '
+                                 'In this case, datavol has shape {} and maskvol {}.'.format(datavol.shape,
+                                                                                             maskvol.shape))
 
 
 def _partition_data(datavol, roivol, roivalue, maskvol=None, zeroe=True):
@@ -462,14 +478,11 @@ def get_3D_from_4D(image, vol_idx=0):
     hdr, aff = get_img_info(img)
 
     if len(img.shape) != 4:
-        msg = 'Volume in {} does not have 4 dimensions.'.format(repr_imgs(img))
-        log.error(msg)
-        raise ValueError(msg)
+        raise AttributeError('Volume in {} does not have 4 dimensions.'.format(repr_imgs(img)))
 
     if not 0 <= vol_idx < img.shape[3]:
-        msg = 'IndexError: 4th dimension in volume {} has {} volumes, not {}.'.format(repr_imgs(img), img.shape[3], vol_idx)
-        log.error(msg)
-        raise IndexError(msg)
+        raise IndexError('IndexError: 4th dimension in volume {} has {} volumes, '
+                         'not {}.'.format(repr_imgs(img), img.shape[3], vol_idx))
 
     img_data = img.get_data()
     new_vol  = img_data[:, :, :, vol_idx].copy()
@@ -477,8 +490,3 @@ def get_3D_from_4D(image, vol_idx=0):
     hdr.set_data_shape(hdr.get_data_shape()[:3])
 
     return new_vol, hdr, aff
-
-
-def partition_volume(*args, **kwargs):
-    """ Look at partition_timeseries function docstring. """
-    return partition_timeseries(*args, **kwargs)

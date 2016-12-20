@@ -11,7 +11,7 @@ requires: tinydb >= v3.0 (note that this is not a stable release yet.)
 # 2015, Alexandre Manhaes Savio
 # Use this at your own risk!
 # -------------------------------------------------------------------------------
-
+from datetime import datetime
 from collections import OrderedDict
 
 try:
@@ -23,6 +23,9 @@ from tinydb             import TinyDB, where
 from tinydb.storages    import JSONStorage
 from tinydb.middlewares import CachingMiddleware
 
+from six                import string_types
+from dateutil.tz        import tzutc
+
 
 class MoreThanOneItemError(Exception):
     pass
@@ -30,6 +33,49 @@ class MoreThanOneItemError(Exception):
 
 class NotUniqueItemError(Exception):
     pass
+
+
+def timestamp_with_tzinfo(dt):
+    """
+    Serialize a date/time value into an ISO8601 text representation
+    adjusted (if needed) to UTC timezone.
+
+    For instance:
+    >>> serialize_date(datetime(2012, 4, 10, 22, 38, 20, 604391))
+    '2012-04-10T22:38:20.604391Z'
+    """
+    utc = tzutc()
+
+    if dt.tzinfo:
+        dt = dt.astimezone(utc).replace(tzinfo=None)
+    return dt.isoformat() + 'Z'
+
+
+def timestamp_to_date_str(dt):
+    """ Serialize a date/time value into YYYY-MM-DD date string. """
+    return str(dt.date())
+
+
+def _to_string(data):
+    """ Convert to string all values in `data`.
+
+    Parameters
+    ----------
+    data: dict[str]->object
+
+    Returns
+    -------
+    string_data: dict[str]->str
+    """
+    sdata = data.copy()
+    for k, v in data.items():
+        if isinstance(v, datetime):
+            sdata[k] = timestamp_to_date_str(v)
+
+        elif not isinstance(v, (string_types, float, int)):
+            sdata[k] = str(v)
+
+    return sdata
 
 
 def insert_unique(table, data, unique_fields=None, *, raise_if_found=False):
@@ -73,55 +119,14 @@ def insert_unique(table, data, unique_fields=None, *, raise_if_found=False):
     if item is not None:
         if raise_if_found:
             raise NotUniqueItemError('Not expected to find an item with the same '
-                                     'values for {}.'.format(unique_fields))
+                                     'values for {}. Inserting {} got {} in eid {}.'.format(unique_fields,
+                                                                                            data,
+                                                                                            table.get(eid=item),
+                                                                                            item))
         else:
             return item
 
     return table.insert(data)
-
-
-def find_unique(table, data, unique_fields=None):
-    """Search in `table` an item with the value of the `unique_fields` in the `data` sample.
-    Check if the the obtained result is unique. If nothing is found will return an empty list,
-    if there is more than one item found, will raise an IndexError.
-
-    Parameters
-    ----------
-    table: tinydb.table
-
-    data: dict
-        Sample data
-
-    unique_fields: list of str
-        Name of fields (keys) from `data` which are going to be used to build
-        a sample to look for exactly the same values in the database.
-        If None, will use every key in `data`.
-
-    Returns
-    -------
-    eid: int
-        Id of the object found with same `unique_fields`.
-        None if none is found.
-
-    Raises
-    ------
-    MoreThanOneItemError
-        If more than one example is found.
-    """
-    if unique_fields is None:
-        unique_fields = list(data.keys())
-
-    query = _query_data(data, field_names=unique_fields, operators='__eq__')
-    items = table.search(query)
-
-    if len(items) == 1:
-        return items[0].eid
-
-    if len(items) == 0:
-        return None
-
-    raise MoreThanOneItemError('Expected to find zero or one items, but found '
-                                '{} items.'.format(len(items)))
 
 
 def search_sample(table, sample):
@@ -142,6 +147,77 @@ def search_sample(table, sample):
     query = _query_sample(sample=sample, operators='__eq__')
 
     return table.search(query)
+
+
+def search_unique(table, sample, unique_fields=None):
+    """ Search for items in `table` that have the same field sub-set values as in `sample`.
+    Expecting it to be unique, otherwise will raise an exception.
+
+    Parameters
+    ----------
+    table: tinydb.table
+    sample: dict
+        Sample data
+
+    Returns
+    -------
+    search_result: tinydb.database.Element
+        Unique item result of the search.
+
+    Raises
+    ------
+    KeyError:
+        If the search returns for more than one entry.
+    """
+    if unique_fields is None:
+        unique_fields = list(sample.keys())
+
+    query = _query_data(sample, field_names=unique_fields, operators='__eq__')
+    items = table.search(query)
+
+    if len(items) == 1:
+        return items[0]
+
+    if len(items) == 0:
+        return None
+
+    raise MoreThanOneItemError('Expected to find zero or one items, but found '
+                                '{} items.'.format(len(items)))
+
+
+def find_unique(table, sample, unique_fields=None):
+    """Search in `table` an item with the value of the `unique_fields` in the `sample` sample.
+    Check if the the obtained result is unique. If nothing is found will return an empty list,
+    if there is more than one item found, will raise an IndexError.
+
+    Parameters
+    ----------
+    table: tinydb.table
+
+    sample: dict
+        Sample data
+
+    unique_fields: list of str
+        Name of fields (keys) from `data` which are going to be used to build
+        a sample to look for exactly the same values in the database.
+        If None, will use every key in `data`.
+
+    Returns
+    -------
+    eid: int
+        Id of the object found with same `unique_fields`.
+        None if none is found.
+
+    Raises
+    ------
+    MoreThanOneItemError
+        If more than one example is found.
+    """
+    res = search_unique(table, sample, unique_fields)
+    if res is not None:
+        return res.eid
+    else:
+        return res
 
 
 def _query_sample(sample, operators='__eq__'):
@@ -308,7 +384,7 @@ class PetitDB(TinyDB):
 
         Returns
         -------
-        elem: dict
+        elem: tinydb.database.Element
 
         Raises
         ------
@@ -359,12 +435,12 @@ class PetitDB(TinyDB):
             values from `data` is found in `table`.
         """
         return insert_unique(table=self.table(table_name),
-                             data=data,
+                             data=_to_string(data),
                              unique_fields=unique_fields,
                              raise_if_found=raise_if_found)
 
-    def find_unique(self, table_name, data, unique_fields=None):
-        """Search in `table` an item with the value of the `unique_fields` in the `data` sample.
+    def search_unique(self, table_name, sample, unique_fields=None):
+        """ Search in `table` an item with the value of the `unique_fields` in the `data` sample.
         Check if the the obtained result is unique. If nothing is found will return an empty list,
         if there is more than one item found, will raise an IndexError.
 
@@ -372,7 +448,7 @@ class PetitDB(TinyDB):
         ----------
         table_name: str
 
-        data: dict
+        sample: dict
             Sample data
 
         unique_fields: list of str
@@ -391,9 +467,9 @@ class PetitDB(TinyDB):
         MoreThanOneItemError
             If more than one example is found.
         """
-        return find_unique(table=self.table(table_name),
-                           data=data,
-                           unique_fields=unique_fields)
+        return search_unique(table=self.table(table_name),
+                             sample=sample,
+                             unique_fields=unique_fields)
 
     def search_sample(self, table_name, sample):
         """Search for items in `table` that have the same field sub-set values as in `sample`.
@@ -413,7 +489,7 @@ class PetitDB(TinyDB):
         return search_sample(table=self.table(table_name),
                              sample=sample)
 
-    def is_unique(self, table_name, data, unique_fields=None):
+    def is_unique(self, table_name, sample, unique_fields=None):
         """Return True if an item with the value of `unique_fields`
         from `data` is unique in the table with `table_name`.
         False if no sample is found or more than one is found.
@@ -424,7 +500,8 @@ class PetitDB(TinyDB):
         ----------
         table_name: str
 
-        data: dict
+        sample: dict
+            Sample data for query
 
         unique_fields: str or list of str
 
@@ -434,7 +511,7 @@ class PetitDB(TinyDB):
         """
         try:
             eid = find_unique(self.table(table_name),
-                              data=data,
+                              sample=sample,
                               unique_fields=unique_fields)
         except:
             return False
@@ -450,10 +527,11 @@ class PetitDB(TinyDB):
         table_name: str
 
         fields: dict or function[dict -> None]
-            the fields that the matching element will have
+            new data/values to insert into the unique element
             or a method that will update the elements.
 
         data: dict
+            Sample data for query
 
         cond: tinydb.Query
             which elements to update
@@ -478,7 +556,7 @@ class PetitDB(TinyDB):
                 raise IndexError(msg)
 
         else:
-            self.table(table_name).update(fields, cond=cond, eids=[eid])
+            self.table(table_name).update(_to_string(fields), cond=cond, eids=[eid])
 
         return eid
 
@@ -487,6 +565,6 @@ class PetitDB(TinyDB):
         in table `table_name`.
         Check function search_sample for more details.
         """
-        return len(search_sample(table=self.table(table_name),
-                                 sample=sample))
+        return len(list(search_sample(table=self.table(table_name),
+                                      sample=sample)))
 

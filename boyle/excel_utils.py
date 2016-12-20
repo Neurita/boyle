@@ -8,7 +8,7 @@ except:
 
 import pandas as pd
 import xlrd
-from   openpyxl import load_workbook
+from openpyxl import load_workbook
 
 
 def _openpyxl_read_xl(xl_path: str):
@@ -38,7 +38,7 @@ XL_READERS = {'xlrd': _xlrd_read_xl,
 
 def _use_openpyxl_or_xlrf(xl_path: str):
     fails   = []
-    choices = ['openpyxl', 'xlrd']
+    choices = XL_READERS.keys()
     for m in choices:
         reader = XL_READERS[m]
 
@@ -110,7 +110,7 @@ def get_sheet_list(xl_path: str) -> List:
         return wb.sheet_names()
 
 
-def concat_sheets(xl_path: str, sheetnames=None):
+def concat_sheets(xl_path: str, sheetnames=None, add_tab_names=False):
     """ Return a pandas DataFrame with the concat'ed
     content of the `sheetnames` from the Excel file in
     `xl_path`.
@@ -124,6 +124,10 @@ def concat_sheets(xl_path: str, sheetnames=None):
         List of existing sheet names of `xl_path`.
         If None, will use all sheets from `xl_path`.
 
+    add_tab_names: bool
+        If True will add a 'Tab' column which says from which
+        tab the row comes from.
+
     Returns
     -------
     df: pandas.DataFrame
@@ -134,6 +138,11 @@ def concat_sheets(xl_path: str, sheetnames=None):
         sheetnames = get_sheet_list(xl_path)
 
     sheets = pd.read_excel(xl_path, sheetname=sheetnames)
+
+    if add_tab_names:
+        for tab in sheets:
+            sheets[tab]['Tab'] = [tab] * len(sheets[tab])
+
     return pd.concat([sheets[tab] for tab in sheets])
 
 

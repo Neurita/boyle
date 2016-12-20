@@ -12,9 +12,6 @@
 import nibabel as nib
 from nipy.io.nifti_ref import nifti2nipy
 from nipy.core.reference.array_coords import ArrayCoordMap
-import logging
-
-log = logging.getLogger(__name__)
 
 
 def voxcoord_to_mm(cm, i, j, k):
@@ -35,8 +32,8 @@ def voxcoord_to_mm(cm, i, j, k):
         mm = cm([i, j, k])
     except Exception as exc:
         raise Exception('Error on converting coordinates.') from exc
-
-    return mm
+    else:
+        return mm
 
 
 def mm_to_voxcoord(cm, x, y, z):
@@ -56,8 +53,8 @@ def mm_to_voxcoord(cm, x, y, z):
         vox = cm.inverse()([x, y, z])
     except Exception as exc:
         raise Exception('Error on converting coordinates') from exc
-
-    return vox
+    else:
+        return vox
 
 
 def get_3D_coordmap(img):

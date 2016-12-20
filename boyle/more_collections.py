@@ -1,8 +1,6 @@
-import logging
+
 from itertools import chain
 from collections import OrderedDict, Callable
-
-log = logging.getLogger(__name__)
 
 
 def dictify(a_named_tuple):
@@ -48,11 +46,7 @@ def merge_dict_of_lists(adict, indices, pop_later=True, copy=True):
             if i < 0 or i >= x:
                 raise IndexError("Given indices are out of dict range.")
 
-    try:
-        check_indices(indices, len(adict))
-    except IndexError as ie:
-        log.exception('Error: Indices check did not pass')
-        raise
+    check_indices(indices, len(adict))
 
     rdict = adict.copy() if copy else adict
 
@@ -85,20 +79,12 @@ def append_dict_values(list_of_dicts, keys=None):
     DefaultOrderedDict of lists
     """
     if keys is None:
-        try:
-            keys = list(list_of_dicts[0].keys())
-        except IndexError as ie:
-            log.exception('Could not get the first element of the list.')
-            raise
+        keys = list(list_of_dicts[0].keys())
 
     dict_of_lists = DefaultOrderedDict(list)
     for d in list_of_dicts:
         for k in keys:
-            try:
-                dict_of_lists[k].append(d[k])
-            except KeyError as ke:
-                log.exception('Error looking for key {} in dict.'.format(k))
-                raise
+            dict_of_lists[k].append(d[k])
     return dict_of_lists
 
 
@@ -114,12 +100,7 @@ class ItemSet(object):
         return self.items.next()
 
     def __getitem__(self, item):
-        if hasattr(self.items, '__getitem__'):
-            return self.items[item]
-        else:
-            msg = 'Item set has no __getitem__ implemented.'
-            log.exception(msg)
-            raise RuntimeError(msg)
+        return self.items[item]
 
     def __len__(self):
         return len(self.items)
@@ -130,9 +111,7 @@ class ItemSet(object):
         elif isinstance(self.items, set):
             self.items.union(other_set)
         else:
-            msg = 'ItemSet item has no extend implemented.'
-            log.exception(msg)
-            raise RuntimeError(msg)
+            raise AttributeError('ItemSet item has no extend implemented.')
 
 
 class DefaultOrderedDict(OrderedDict):

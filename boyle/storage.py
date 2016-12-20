@@ -13,14 +13,11 @@
 #-------------------------------------------------------------------------------
 
 import shelve
-import logging
 import scipy.io    as sio
 import pandas      as pd
 
 from .files.names import (get_extension,
                           add_extension_if_needed)
-
-log = logging.getLogger(__name__)
 
 
 def sav_to_pandas_rpy2(input_file):
@@ -84,9 +81,8 @@ def save_variables_to_shelve(file_path, variables):
     for vn in variables.keys():
         try:
             mashelf[vn] = variables[vn]
-        except:
-            log.exception('Error shelving variable {0}'.format(vn))
-            raise
+        except KeyError as ke:
+            raise Exception('Error shelving variable {0}'.format(vn)) from ke
 
     mashelf.close()
 
@@ -109,10 +105,8 @@ def save_variables_to_mat(file_path, variables, format='5'):
 
     try:
         sio.savemat(file_path, variables, format=format)
-    except:
-        log.exception('Error saving to {}'.format(file_path))
-        raise
-
+    except IOError as ioe:
+        raise IOError('Error saving to {}'.format(file_path)) from ioe
 
 
 class ExportData(object):
@@ -134,6 +128,10 @@ class ExportData(object):
 
         variables: dict
             Dictionary varname -> variable
+
+        Raises
+        ------
+        ValueError: if the extension of the filesname is not recognized.
         """
         ext = get_extension(filename).lower()
         out_exts = {'.pyshelf', '.shelf', '.mat', '.hdf5', '.h5'}
@@ -154,7 +152,7 @@ class ExportData(object):
             save_variables_to_hdf5(output_file, variables)
 
         else:
-            log.error('Filename extension {0} not accepted.'.format(ext))
+            raise ValueError('Filename extension {0} not accepted.'.format(ext))
 
     @staticmethod
     def save_varlist(filename, varnames, varlist):

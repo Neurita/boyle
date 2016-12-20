@@ -18,7 +18,6 @@ from   collections   import defaultdict
 import pydicom as dicom
 from   pydicom.dataset import FileDataset
 
-from ..commands import call_command
 from ..files.search import get_all_files, recursive_glob
 
 
@@ -56,16 +55,10 @@ class DicomFile(FileDataset):
     """
     def __init__(self, file_path, preamble=None, file_meta=None,
                  is_implicit_VR=True, is_little_endian=True):
-        try:
-            dcm = dicom.read_file(file_path, force=True)
-
-            FileDataset.__init__(self, file_path, dcm, preamble, file_meta,
-                                 is_implicit_VR, is_little_endian)
-
-            self.file_path = op.abspath(file_path)
-
-        except Exception as exc:
-            raise Exception('Error reading file {0}.'.format(file_path)) from exc
+        dcm = dicom.read_file(file_path, force=True)
+        super(DicomFile, self).__init__(file_path, dcm, preamble, file_meta,
+                                        is_implicit_VR, is_little_endian)
+        self.file_path = op.abspath(file_path)
 
     def get_attributes(self, attributes, default=''):
         """Return the attributes values from this DicomFile
@@ -94,9 +87,9 @@ class DicomFile(FileDataset):
 
 
 def get_dicom_files(dirpath):
-    return [DicomFile(os.path.join(dp, f))
+    return (DicomFile(os.path.join(dp, f))
             for dp, dn, filenames in os.walk(dirpath)
-            for f in filenames if is_dicom_file(os.path.join(dp, f))]
+            for f in filenames if is_dicom_file(os.path.join(dp, f)))
 
 
 def get_unique_field_values(dcm_file_list, field_name):
@@ -114,12 +107,11 @@ def get_unique_field_values(dcm_file_list, field_name):
     Set of field values
     """
     field_values = set()
-    try:
-        for dcm in dcm_file_list:
-            field_values.add(str(DicomFile(dcm).get_attributes(field_name)))
-        return field_values
-    except Exception as exc:
-        raise Exception('Error reading file {}'.format(dcm)) from exc
+
+    for dcm in dcm_file_list:
+        field_values.add(str(DicomFile(dcm).get_attributes(field_name)))
+
+    return field_values
 
 
 def find_all_dicom_files(root_path):
@@ -137,13 +129,13 @@ def find_all_dicom_files(root_path):
     Set of DICOM absolute file paths
     """
     dicoms = set()
-    f = None
+
     try:
         for fpath in get_all_files(root_path):
             if is_dicom_file(fpath):
                 dicoms.add(fpath)
-    except Exception as exc:
-        raise Exception('Error reading file {0}.'.format(fpath)) from exc
+    except IOError as ioe:
+        raise IOError('Error reading file {0}.'.format(fpath)) from ioe
 
     return dicoms
 
@@ -160,7 +152,7 @@ def is_dicom_file(filepath):
     :return: bool
     """
     if not os.path.exists(filepath):
-        return False
+        raise IOError('File {} not found.'.format(filepath))
 
     filename = os.path.basename(filepath)
     if filename == 'DICOMDIR':
@@ -198,8 +190,8 @@ def group_dicom_files(dicom_paths, hdr_field='PatientID'):
             hdr = dicom.read_file(dcm)
             group_key = getattr(hdr, hdr_field)
             dicom_groups[group_key].append(dcm)
-    except Exception as exc:
-        raise Exception('Error reading file {0}.'.format(dcm)) from exc
+    except KeyError as ke:
+        raise KeyError('Error reading field {} from file {}.'.format(hdr_field, dcm)) from ke
 
     return dicom_groups
 

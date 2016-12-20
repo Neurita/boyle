@@ -18,7 +18,6 @@ from   six                           import string_types
 from   .read              import load_nipy_img, get_img_data, repr_imgs
 from   .mask              import load_mask
 from   .check             import check_img_compatibility
-from   .neuroimage        import NeuroImage
 from   ..files.names      import get_abspath
 from   ..more_collections import ItemSet
 from   ..storage          import ExportData

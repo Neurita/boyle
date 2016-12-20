@@ -50,7 +50,7 @@ def save_niigz(filepath, vol, header=None, affine=None):
         import nipy.core.image as     niim
         from   nipy            import save_image
     except:
-        log.error('Could not import nipy.')
+        pass
     else:
         we_have_nipy = True
 
@@ -64,8 +64,8 @@ def save_niigz(filepath, vol, header=None, affine=None):
         nib.save(vol, filepath)
 
     elif we_have_nipy and isinstance(vol, niim.Image):
-            log.debug('Saving nipy nifti file: {}.'.format(filepath))
-            save_image(vol, filepath)
+        log.debug('Saving nipy nifti file: {}.'.format(filepath))
+        save_image(vol, filepath)
 
     #elif isinstance(vol, NeuroImage):
     #    log.debug('Saving boyle.NeuroImage nifti file: {}.'.format(filepath))

@@ -38,9 +38,9 @@ def write_meta_header(filename, meta_dict):
     for tag in MHD_TAGS:
         if tag in meta_dict.keys():
             header += '{} = {}\n'.format(tag, meta_dict[tag])
-    f = open(filename, 'w')
-    f.write(header)
-    f.close()
+
+    with open(filename, 'w') as f:
+        f.write(header)
 
 
 def dump_raw_data(filename, data):
@@ -59,15 +59,15 @@ def dump_raw_data(filename, data):
         data = data.reshape([data.shape[0], data.shape[1]*data.shape[2]])
         # End 3D fix
 
-    rawfile = open(filename, 'wb')
     a = array.array('f')
-
     for o in data:
         a.fromlist(list(o.flatten()))
+
     # if is_little_endian():
     #     a.byteswap()
-    a.tofile(rawfile)
-    rawfile.close()
+
+    with open(filename, 'wb') as rawf:
+        a.tofile(rawf)
 
 
 def write_mhd_file(filename, data, shape=None, meta_dict=None):
@@ -169,8 +169,7 @@ def copy_mhd_and_raw(src, dst):
     """
     # check if src exists
     if not op.exists(src):
-        msg = 'Could not find file {}.'.format(src)
-        raise IOError(msg)
+        raise IOError('Could not find file {}.'.format(src))
 
     # check its extension
     ext = get_extension(src)
