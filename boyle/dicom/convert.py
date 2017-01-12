@@ -16,7 +16,7 @@ import tempfile
 import subprocess
 from   glob import glob
 
-import pydicom as dicom
+import dicom
 import nibabel
 import numpy
 

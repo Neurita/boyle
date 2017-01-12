@@ -15,8 +15,8 @@ import logging
 import subprocess
 from   collections   import defaultdict
 
-import pydicom as dicom
-from   pydicom.dataset import FileDataset
+import dicom as dicom
+from   dicom.dataset import FileDataset
 
 from ..files.search import get_all_files, recursive_glob
 
