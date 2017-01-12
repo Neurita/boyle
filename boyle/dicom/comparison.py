@@ -268,8 +268,8 @@ def copy_groups_to_folder(dicom_groups, folder_path, groupby_field_name):
     """
     if dicom_groups is None or not dicom_groups:
         raise ValueError('Expected a boyle.dicom.sets.DicomFileSet.')
-
-    os.makedirs(folder_path, exist_ok=False)
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path, exist_ok=False)
 
     for dcmg in dicom_groups:
         if groupby_field_name is not None and len(groupby_field_name) > 0:
