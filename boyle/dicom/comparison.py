@@ -274,8 +274,9 @@ def copy_groups_to_folder(dicom_groups, folder_path, groupby_field_name):
     for dcmg in dicom_groups:
         if groupby_field_name is not None and len(groupby_field_name) > 0:
             dfile = DicomFile(dcmg)
+            dir_name = ''
             for att in groupby_field_name:
-                dir_name = dfile.get_attributes(att) + "/"
+                dir_name = os.path.join(dir_name, dfile.get_attributes(att))
             dir_name = str(dir_name)
         else:
             dir_name = os.path.basename(dcmg)
